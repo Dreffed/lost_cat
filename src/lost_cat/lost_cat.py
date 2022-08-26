@@ -7,6 +7,20 @@ from .utils.path_utils import build_path, scan_files
 class SourceAlreadyExists(Exception):
     """A simple exception to raise already exist error"""
 
+class ParserAlreadyExists(Exception):
+    """A simple exception to raise already exist error"""
+
+class ScannerAlreadyExists(Exception):
+    """A simple exception to raise already exist error"""
+
+class ParserFailedToLoad(Exception):
+    """A simple exception to raise already exist error"""
+    def __init__(self, label: str, base_class: str, message: str) -> None:
+        self.label = label
+        self.base_class = base_class
+        self.message = message
+        super().__init__()
+
 class LostCat():
     """
     The Lost Cat Main class
@@ -26,6 +40,9 @@ class LostCat():
         # a labelled dic of sources,
         # sources are parsed to an object
         self._sources = {}
+        self._parsers = {}
+        self._parse_ext = {}
+        self._scanners = {}
 
         # a local store for the disovered artifacts
         self._artifacts = {
@@ -44,6 +61,49 @@ class LostCat():
 
         uri_obj = build_path(uri=uri)
         self._sources[label] = uri_obj
+
+    def add_scanner(self, label: str, base_class: object, overwrite: bool = False) -> None:
+        """Add a scnner tool to the system, the added scanner will """
+        if label in self._scanners and not overwrite:
+            raise ScannerAlreadyExists
+
+        # the scanner will process the source uri and determine if it can handle the
+        # scanning action and prodution of items
+
+
+    def add_parser(self, label: str, base_class: object, overwrite: bool = False) -> None:
+        """Adds a parser to the file handling process
+        {
+            <name> : {
+                    "class": <class>
+                },
+            ....
+        }
+        """
+        if label in self._parsers and not overwrite:
+            raise ParserAlreadyExists
+
+        self._parsers[label] = {"class": base_class}
+
+        # scan the parser for the file types supported...
+        try:
+            obj = base_class()
+            for ext in obj.get_extensions():
+                if ext not in self._parse_ext:
+                    self._parse_ext[ext] = []
+                self._parse_ext[ext].append(label)
+        except Exception as ex:
+            raise ParserFailedToLoad(label=label,
+                    message="Class provided could not be loaded for extensions.",
+                    base_class=base_class) from ex
+
+    def load_catalog(self, catalog: dict) -> None:
+        """Will load a dictionary as the catalog"""
+        self._artifacts = catalog
+
+    def fetch_catalog(self) -> dict:
+        """Will load a dictionary as the catalog"""
+        return self._artifacts
 
     def catalog_artifacts(self) -> dict:
         """Will scan the sources and load a dictionary with the found files,

@@ -7,7 +7,7 @@ from .utils.path_utils import build_path, scan_files
 class SourceAlreadyExists(Exception):
     """A simple exception to raise already exist error"""
 
-class LostCat(object):
+class LostCat():
     """
     The Lost Cat Main class
 

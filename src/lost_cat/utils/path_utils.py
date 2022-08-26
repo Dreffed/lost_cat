@@ -1,6 +1,7 @@
 """This model provides a set of functions for handle paths,
 file scanning and zip file handling."""
 import os
+import tarfile
 import zipfile
 
 from urllib.parse import urlparse
@@ -38,9 +39,7 @@ def build_path(uri: str) -> dict:
     }
 
     if os.path.exists(uri):
-        #print(uri)
         drv, path = os.path.splitdrive(uri)
-        #print(f"DRV: {drv} \n\t{path}")
 
         if os.path.isdir(uri):
             src["type"] = "folder"
@@ -48,9 +47,7 @@ def build_path(uri: str) -> dict:
         elif os.path.isfile(uri):
             src["type"] = "file"
             path, filename = os.path.split(path)
-            #print(f"PFN:\t{path}\n\t{filename}")
             name, ext = os.path.splitext(filename)
-            #print(f"EXT:\t{name}\n\t{ext}")
             src["name"] = name
             src["ext"] = ext.lower()
 
@@ -61,10 +58,8 @@ def build_path(uri: str) -> dict:
         folders = []
         while len(path) > 1:
             path, fld = os.path.split(path)
-            #print(f"FLD:\t{path}\n\t{fld}")
             if len(fld) > 0:
                 folders.append(fld)
-            #print(f"F:\t{folders}")
 
         folders.reverse()
         src["folders"] = folders
@@ -89,13 +84,19 @@ def build_path(uri: str) -> dict:
 def scan_files(uri: str) -> dict:
     """Will scan the folder and walk the files and folders below
     yields the found file"""
+
+    func = {
+        ".zip": scan_zip,
+        ".tar.gz": scan_tar
+    }
+
     for dirpath, _, filenames in os.walk(uri):
         for fullname in filenames:
             filepath = os.path.join(dirpath,fullname)
             filename, ext = os.path.splitext(fullname)
             ext = ext.lower()
-            if ext in [".zip"]:
-                zfiles = scan_zip(filepath)
+            if ext in func:
+                zfiles = func.get(ext)(filepath)
 
                 yield {
                     "path": filepath,
@@ -132,5 +133,29 @@ def scan_zip(uri: str) -> dict:
                 "ext": ext.lower(),
             }
             files.append(sub_file)
+
+    return files
+
+def scan_tar(uri: str) -> dict:
+    """Will handle the targz file"""
+    tar_file = tarfile.open(uri, mode="r")
+    files = []
+    for szf in tar_file.getmembers():
+        # process only files...
+        if not szf.isfile():
+            continue
+
+        filepath = szf.name
+        dirpath, fullname = os.path.split(filepath)
+        filename, ext = os.path.splitext(fullname)
+        sub_file = {
+            "zipfile": uri,
+            "path": filepath,
+            "folder": dirpath,
+            "name": filename,
+            "size": szf.size,
+            "ext": ext.lower(),
+        }
+        files.append(sub_file)
 
     return files

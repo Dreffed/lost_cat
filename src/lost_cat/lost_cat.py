@@ -2,7 +2,17 @@
 Lost cat will scan and process a range of files
 """
 import os
+
 from .utils.path_utils import build_path, scan_files
+
+# <TODO: move this out exception library>
+class FeatureNotImplemented(Exception):
+    """used for the feature not implemented"""
+    def __init__(self, label: str, feature: str, message: str) -> None:
+        self.label = label
+        self.feature = feature
+        self.message = message
+        super().__init__()
 
 class SourceAlreadyExists(Exception):
     """A simple exception to raise already exist error"""
@@ -43,6 +53,7 @@ class LostCat():
         self._parsers = {}
         self._parse_ext = {}
         self._scanners = {}
+        self._features = ["parser"]
 
         # a local store for the disovered artifacts
         self._artifacts = {
@@ -64,12 +75,17 @@ class LostCat():
 
     def add_scanner(self, label: str, base_class: object, overwrite: bool = False) -> None:
         """Add a scnner tool to the system, the added scanner will """
+        # this disabled, add an app option
+        if "scanner" not in self._features:
+            raise FeatureNotImplemented(label="Feature", feature="Scanners",
+                    message="Scanner feature not implemented!")
+
         if label in self._scanners and not overwrite:
             raise ScannerAlreadyExists
 
         # the scanner will process the source uri and determine if it can handle the
         # scanning action and prodution of items
-
+        self._scanners[label] = {"class": base_class}
 
     def add_parser(self, label: str, base_class: object, overwrite: bool = False) -> None:
         """Adds a parser to the file handling process
@@ -80,6 +96,11 @@ class LostCat():
             ....
         }
         """
+        # this disabled, add an app option
+        if "parser" not in self._features:
+            raise FeatureNotImplemented(label="Feature", feature="parser",
+                    message="parser feature not implemented!")
+
         if label in self._parsers and not overwrite:
             raise ParserAlreadyExists
 

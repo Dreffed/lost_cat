@@ -106,10 +106,10 @@ def get_filename(file_dict: dict) -> str:
         <TODO: Add handler for type = http etc.>
     """
 
-    logger.debug("F: {}".format(file_dict))
+    logger.debug("F: %s", file_dict)
     if file_dict.get("root") == ".":
         file_dict["root"] = os.getcwd()
-        logger.debug("using current drive {}".format(file_dict.get("root")))
+        logger.debug("using current drive %s", file_dict.get("root"))
 
     if "folders" in file_dict:
         path = os.path.join(file_dict.get("root"), *file_dict.get("folders",[]))
@@ -126,7 +126,8 @@ def get_filename(file_dict: dict) -> str:
 
 def get_file_metadata(uri: str, options: dict = None) -> dict:
     """return dict of file meats data based on the options passed
-        "file": the file name of the file, if "splitextension" specified it is just the filename not extension
+        "file": the file name of the file, if "splitextension" specified it is
+                just the filename not extension
         "ext": the dotted extension of the file
         "folder"L the folder path of the file
 
@@ -173,23 +174,22 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
 
     return file_dict
 
-def make_hash(uri: str) -> dict:
+def make_hash(uri: str, buff_size: int = 65536) -> dict:
     """ Will hash the files for both MD5 and SHA1 and return a dict of the hashes"""
     hashes = {}
-    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
-
     md5 = hashlib.md5()
     sha1 = hashlib.sha1()
+
     try:
         if os.path.exists(uri):
-            logger.debug('{}'.format(uri))
-            with open(uri, 'rb') as f:
+            logger.debug('%s', uri)
+            with open(uri, 'rb') as f_io:
                 while True:
-                    d = f.read(BUF_SIZE)
-                    if not d:
+                    d_bytes = f_io.read(buff_size)
+                    if not d_bytes:
                         break
-                    md5.update(d)
-                    sha1.update(d)
+                    md5.update(d_bytes)
+                    sha1.update(d_bytes)
 
             hashes['MD5'] = md5.hexdigest()
             hashes['SHA1'] = sha1.hexdigest()
@@ -198,7 +198,7 @@ def make_hash(uri: str) -> dict:
             hashes['SHA1'] = 'Missing file'
 
     except OSError as ex:
-        logger.error('ERROR: [{}]\n{}'.format(uri,ex))
+        logger.error('ERROR: [%s]\n%s', uri, ex)
 
         hashes['MD5'] = 'ERROR'
         hashes['SHA1'] = 'ERROR'
@@ -253,8 +253,8 @@ def is_include(file_dict: dict, options: dict = None) -> bool:
         if "regex" in filter_config:
             output["regex"] = 0
             filter_reg = re.compile(filter_config.get("regex", ""))
-            m = filter_reg.match(file_dict.get("name",""))
-            if m:
+            m_re = filter_reg.match(file_dict.get("name",""))
+            if m_re:
                 output["regex"] = 1
 
     return len(output) == sum(output.values)

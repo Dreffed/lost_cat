@@ -1,11 +1,23 @@
-"""This model provides a set of functions for handle paths,
-file scanning and zip file handling."""
+"""This module provides a set of functions for handle paths,
+file scanning and zip file handling.
+@author: Dreffed
+copyright adscens.io 2022 / thoughtswin systems 2022
+"""
+import hashlib
+import logging
+import re
 import os
 import tarfile
+import time
 import zipfile
 
 from urllib.parse import urlparse
 from validators import url as val_url
+
+logger = logging.getLogger(__name__)
+
+class SourceDoesNotExist(Exception):
+    """A class to raise the missing file"""
 
 class SourceNotValid(Exception):
     """A simple exception class to catch edge casses"""
@@ -81,7 +93,119 @@ def build_path(uri: str) -> dict:
 
     return src
 
-def scan_files(uri: str) -> dict:
+def get_filename(file_dict: dict) -> str:
+    """Will accept a json object of file details and return the
+    full filename
+        {
+            "root":     str
+            "folder":   str     (optional)
+            "folders":  []      (optional)
+            "name":     str     (optional)
+            "ext":              expects a "."
+        }
+        <TODO: Add handler for type = http etc.>
+    """
+
+    logger.debug("F: {}".format(file_dict))
+    if file_dict.get("root") == ".":
+        file_dict["root"] = os.getcwd()
+        logger.debug("using current drive {}".format(file_dict.get("root")))
+
+    if "folders" in file_dict:
+        path = os.path.join(file_dict.get("root"), *file_dict.get("folders",[]))
+    else:
+        path = os.path.join(file_dict.get("root"), file_dict.get("folder",""))
+
+    # expand the path for user and env vars
+    path = os.path.expandvars(os.path.expanduser(path))
+
+    if "name" in file_dict:
+        path = os.path.join(path, "{}{}".format(file_dict.get("name"), file_dict.get("ext","")))
+
+    return path
+
+def get_file_metadata(uri: str, options: dict = None) -> dict:
+    """return dict of file meats data based on the options passed
+        "file": the file name of the file, if "splitextension" specified it is just the filename not extension
+        "ext": the dotted extension of the file
+        "folder"L the folder path of the file
+
+        optional output:
+            "folders": an array of the folder names, option "split"
+            date and size details: option "stats"
+                "modified"
+                "accessed"
+                "size"
+                "bytes": szie in mb, gb, etc.
+
+    """
+    if not os.path.exists(uri):
+        raise SourceDoesNotExist()
+
+    drv, path = os.path.splitdrive(uri)
+    dirpath = os.path.dirname(path)
+    filename = os.path.basename(path)
+    fname, ext = os.path.splitext(filename)
+    f_type = os.path.isfile(uri)
+    file_dict =  {
+            "type":f_type,
+            "root": f"{drv}{os.sep}",
+            "folder" : dirpath,
+            "file" : filename,
+            "ext": ext.lower()
+    }
+
+    if options and options.get("splitextention"):
+        file_dict["file"] = fname
+
+    if options and options.get("splitfolders"):
+        #file_dict["folders"] = splitall(dirpath)
+        pass
+
+    if options and options.get("stats"):
+        time_format = "%Y-%m-%d %H:%M:%S"
+        file_stats = os.stat(uri)
+        file_dict["accessed"] = time.strftime(time_format,time.localtime(file_stats.st_atime))
+        file_dict["modified"] = time.strftime(time_format,time.localtime(file_stats.st_mtime))
+        file_dict["created"] = time.strftime(time_format,time.localtime(file_stats.st_ctime))
+        file_dict["size"] = file_stats.st_size
+        file_dict["mode"] = file_stats.st_mode
+
+    return file_dict
+
+def make_hash(uri: str) -> dict:
+    """ Will hash the files for both MD5 and SHA1 and return a dict of the hashes"""
+    hashes = {}
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+
+    md5 = hashlib.md5()
+    sha1 = hashlib.sha1()
+    try:
+        if os.path.exists(uri):
+            logger.debug('{}'.format(uri))
+            with open(uri, 'rb') as f:
+                while True:
+                    d = f.read(BUF_SIZE)
+                    if not d:
+                        break
+                    md5.update(d)
+                    sha1.update(d)
+
+            hashes['MD5'] = md5.hexdigest()
+            hashes['SHA1'] = sha1.hexdigest()
+        else:
+            hashes['MD5'] = 'Missing file'
+            hashes['SHA1'] = 'Missing file'
+
+    except OSError as ex:
+        logger.error('ERROR: [{}]\n{}'.format(uri,ex))
+
+        hashes['MD5'] = 'ERROR'
+        hashes['SHA1'] = 'ERROR'
+
+    return hashes
+
+def scan_files(uri: str, options: dict = None) -> dict:
     """Will scan the folder and walk the files and folders below
     yields the found file"""
 
@@ -93,26 +217,47 @@ def scan_files(uri: str) -> dict:
     for dirpath, _, filenames in os.walk(uri):
         for fullname in filenames:
             filepath = os.path.join(dirpath,fullname)
-            filename, ext = os.path.splitext(fullname)
-            ext = ext.lower()
+            file_dict = get_file_metadata(uri=filepath, options=options)
+            ext = file_dict.get("ext","")
+
+            # filter the files...
+            if not is_include(file_dict=file_dict, options=options):
+                continue
+
+            # handel the options for hash
+            if options.get("generatehash"):
+                maxsize = options.get("maxhashsize", 0)
+                if maxsize == 0 or maxsize >= file_dict.get("size",0):
+                    file_dict["hash"] = make_hash(uri=filepath)
+
             if ext in func:
                 zfiles = func.get(ext)(filepath)
 
-                yield {
-                    "path": filepath,
-                    "folder": dirpath,
-                    "name": filename,
-                    "ext": ext,
-                    "files": zfiles
-                }
+                file_dict["files"] = zfiles
+                yield file_dict
 
             else:
-                yield {
-                    "path": filepath,
-                    "folder": dirpath,
-                    "name": filename,
-                    "ext": ext,
-                }
+                yield file_dict
+
+def is_include(file_dict: dict, options: dict = None) -> bool:
+    """will use the filter conditions and if all filters are matched
+    will return true"""
+    filter_config = options.get("filter")
+    output = {}
+    if filter_config:
+        if "exts" in filter_config:
+            output["ext"] = 0
+            if file_dict.get("ext","") in filter_config.get("exts", []):
+                output["ext"] = 1
+
+        if "regex" in filter_config:
+            output["regex"] = 0
+            filter_reg = re.compile(filter_config.get("regex", ""))
+            m = filter_reg.match(file_dict.get("name",""))
+            if m:
+                output["regex"] = 1
+
+    return len(output) == sum(output.values)
 
 def scan_zip(uri: str) -> dict:
     """Will scan the zip file and return the file details"""

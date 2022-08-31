@@ -2,8 +2,10 @@
 Lost cat will scan and process a range of files
 """
 import os
+import logging
+from .utils.path_utils import build_path, scan_files, func_switch_zip
 
-from .utils.path_utils import build_path, scan_files
+logger = logging.getLogger(__name__)
 
 # <TODO: move this out exception library>
 class FeatureNotImplemented(Exception):
@@ -49,20 +51,24 @@ class LostCat():
         """Initialize the core elements"""
         # a labelled dic of sources,
         # sources are parsed to an object
-        self._sources = {}
-        self._parsers = {}
-        self._parse_ext = {}
-        self._scanners = {}
+        self._sources = dict()
+        self._parsers = dict()
+        self._parse_ext = dict()
+        self._scanners = dict()
         self._features = ["parser"]
+        self._anonimizer = dict()
+        self._tags_exp = dict()
+        self._group_tags = dict()
+        self._set_alias_tags = dict()
 
         # a local store for the disovered artifacts
         self._artifacts = {
-            "files": {}
+            "files": dict()
         }
 
         # a place to store the processed artifacts, organized
         # by the grouping, and with metadata...
-        self._catalog = {}
+        self._catalog = dict()
 
     def add_source(self, label: str, uri: str, overwrite: bool = False) -> dict:
         """It parse the provided source path and
@@ -70,8 +76,7 @@ class LostCat():
         if label in self._sources and not overwrite:
             raise SourceAlreadyExists
 
-        uri_obj = build_path(uri=uri)
-        self._sources[label] = uri_obj
+        self._sources[label] = build_path(uri=uri)
 
     def add_scanner(self, label: str, base_class: object, overwrite: bool = False) -> None:
         """Add a scnner tool to the system, the added scanner will """
@@ -113,6 +118,7 @@ class LostCat():
                 if ext not in self._parse_ext:
                     self._parse_ext[ext] = []
                 self._parse_ext[ext].append(label)
+
         except Exception as ex:
             raise ParserFailedToLoad(label=label,
                     message="Class provided could not be loaded for extensions.",
@@ -132,9 +138,10 @@ class LostCat():
         <<for web addresses, it'll need a scraper built>>"""
         file_added = 0
         zip_added = 0
-        for uri_obj in self._sources:
+        for _, uri_obj in self._sources.items():
             if uri_obj.get("type") not in ["folder"]:
                 continue
+
             uri = os.path.join(uri_obj.get("root"), *uri_obj.get("folders",[]))
 
             for fnd_file in scan_files(uri):
@@ -154,3 +161,83 @@ class LostCat():
             "zipped": zip_added,
             "cataloged": cat_cnt
         }
+
+    def process_artifacts(self) -> dict:
+        """Will scan the loaded files into the catalog and apply the PARSER"""
+        z_path = None
+        z_ext = None
+        zip_obj = None
+
+        data = {}
+
+        # scan the files and zips...
+        for _,file_obj in self._artifacts.get("files", {}).items():
+            f_ext = file_obj.get("ext","<>")
+            if f_ext not in data:
+                data[f_ext] = 0
+            data[f_ext] += 1
+
+            # scan using the template function
+            for p_label in self._parse_ext.get(f_ext, []):
+                cls = self._parsers.get(p_label,{}).get("class")
+                if not cls:
+                    continue
+
+                logger.debug(file_obj)
+
+                if "zipfile" in file_obj:
+                    if file_obj.get("zipfile") != z_path:
+                        z_path = file_obj.get("zipfile")
+                        _, z_ext = os.path.splitext(z_path)
+                        z_ext = z_ext.lower()
+                        z_func = func_switch_zip(ext=z_ext, op_label="open")
+
+                        logger.debug(z_path)
+                        logger.debug(z_func)
+                        zip_obj = z_func(uri=z_path)
+
+                    if zip_obj:
+                        bytes_io = func_switch_zip(ext=z_ext, op_label="fetch")(
+                                file_obj=zip_obj, item_path=file_obj.get("path"))
+                        obj = cls(bytes_io=bytes_io)
+                else:
+                    obj = cls(uri=file_obj.get("path"))
+
+                # load the anonimizer
+                obj.set_anonimizer(anonimizer=self._anonimizer)
+                obj.set_export_tags(tags=self._tags_exp)
+                obj.set_group_tags(tags=self._group_tags)
+                obj.set_alias_tags(tags=self._set_alias_tags)
+
+                md_obj = obj.get_metadata()
+
+                # fetch the metadata...
+                if "metadata" not in file_obj:
+                    file_obj["metadata"] = {}
+
+                for mt, mv in md_obj.get("metadata", {}).items():
+                    file_obj["metadata"][mt] = mv
+
+                if "grouping" not in file_obj:
+                    file_obj["grouping"] = {}
+
+                for gt, gv in md_obj.get("grouping", {}).items():
+                    file_obj["grouping"][gt] = gv
+
+                cur_node = self._catalog
+                # pivot into the grouping structure...
+                for gt, gv in md_obj.get("grouping", {}).items():
+                    if not gv:
+                        gv = "<missing>"
+                    if gv not in cur_node:
+                        cur_node[gv] = {}
+                    cur_node = cur_node.get(gv)
+
+                # save the file item at the botto,
+                cur_node["files"]  = []
+                cur_node["files"].append(file_obj)
+
+                # close th file
+                obj.close()
+
+        return data

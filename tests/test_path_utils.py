@@ -15,8 +15,10 @@ class BuildPath(unittest.TestCase):
     """A container class for the build path modeule test cases"""
 
     def test_build_path(self):
-        """tast the build path function and see it returns"""
-        uri = os.path.join(os.getcwd(), *['data'])
+        """test the build path function and see it returns"""
+        uri = os.path.join(os.getcwd(), *['tests', 'data'])
+        print(uri)
+
         result = build_path(uri=uri)
 
         # check the result

@@ -4,6 +4,7 @@ file scanning and zip file handling.
 copyright adscens.io 2022 / thoughtswin systems 2022
 """
 import hashlib
+import io
 import logging
 import re
 import os
@@ -32,6 +33,24 @@ class SourceNotHandled(Exception):
         self.uri = uri
         self.message = message
         super().__init__(*args)
+
+def func_switch_zip(ext: str, op_label: str) -> object:
+    """A sweithc dict to enable the selection of the
+    function for the zip file handlers, hard coded :("""
+    func = {
+        ".zip": {
+            "open": open_zip,
+            "scan": scan_zip,
+            "fetch": fetch_zip
+        },
+        ".tar.gz": {
+            "open": open_tar,
+            "read": scan_tar,
+            "fetch": fetch_tar
+        }
+    }
+    return func.get(ext,{}).get(op_label)
+
 
 def build_path(uri: str) -> dict:
     """Will take a path, and split into components
@@ -208,12 +227,6 @@ def make_hash(uri: str, buff_size: int = 65536) -> dict:
 def scan_files(uri: str, options: dict = None) -> dict:
     """Will scan the folder and walk the files and folders below
     yields the found file"""
-
-    func = {
-        ".zip": scan_zip,
-        ".tar.gz": scan_tar
-    }
-
     for dirpath, _, filenames in os.walk(uri):
         for fullname in filenames:
             filepath = os.path.join(dirpath,fullname)
@@ -225,13 +238,14 @@ def scan_files(uri: str, options: dict = None) -> dict:
                 continue
 
             # handel the options for hash
-            if options.get("generatehash"):
+            if options and options.get("generatehash"):
                 maxsize = options.get("maxhashsize", 0)
                 if maxsize == 0 or maxsize >= file_dict.get("size",0):
                     file_dict["hash"] = make_hash(uri=filepath)
 
-            if ext in func:
-                zfiles = func.get(ext)(filepath)
+            op_func = func_switch_zip(ext, "scan")
+            if op_func:
+                zfiles = op_func(uri=filepath)
 
                 file_dict["files"] = zfiles
                 yield file_dict
@@ -242,6 +256,9 @@ def scan_files(uri: str, options: dict = None) -> dict:
 def is_include(file_dict: dict, options: dict = None) -> bool:
     """will use the filter conditions and if all filters are matched
     will return true"""
+    if not options:
+        return True
+
     filter_config = options.get("filter")
     output = {}
     if filter_config:
@@ -258,6 +275,14 @@ def is_include(file_dict: dict, options: dict = None) -> bool:
                 output["regex"] = 1
 
     return len(output) == sum(output.values)
+
+def open_zip(uri: str) -> zipfile.ZipFile:
+    """Will open a zip file and return the file handle"""
+    return zipfile.ZipFile(uri)
+
+def open_tar(uri: str) -> tarfile.TarFile:
+    """Will open a tar file and return the handle"""
+    return tarfile.open(uri, mode="r")
 
 def scan_zip(uri: str) -> dict:
     """Will scan the zip file and return the file details"""
@@ -304,3 +329,13 @@ def scan_tar(uri: str) -> dict:
         files.append(sub_file)
 
     return files
+
+def fetch_zip(file_obj: zipfile.ZipFile, item_path: str) -> object:
+    """for a given zip file, return the item"""
+    _data = file_obj.read(item_path)
+    return io.BytesIO(_data)
+
+def fetch_tar(file_obj: tarfile.TarFile, item_path: str) -> object:
+    """For a given tarfile return the item"""
+    _data = file_obj.read(item_path)
+    return io.BytesIO(_data)

@@ -171,7 +171,7 @@ class LostCat():
         data = {}
 
         # scan the files and zips...
-        for _,file_obj in self._artifacts.get("files", {}).items():
+        for _, file_obj in self._artifacts.get("files", {}).items():
             f_ext = file_obj.get("ext","<>")
             if f_ext not in data:
                 data[f_ext] = 0
@@ -182,8 +182,6 @@ class LostCat():
                 cls = self._parsers.get(p_label,{}).get("class")
                 if not cls:
                     continue
-
-                logger.debug(file_obj)
 
                 if "zipfile" in file_obj:
                     if file_obj.get("zipfile") != z_path:
@@ -202,6 +200,8 @@ class LostCat():
                         obj = cls(bytes_io=bytes_io)
                 else:
                     obj = cls(uri=file_obj.get("path"))
+
+                logger.debug("Running Class %s -> %s", p_label, cls)
 
                 # load the anonimizer
                 obj.set_anonimizer(anonimizer=self._anonimizer)
@@ -224,7 +224,13 @@ class LostCat():
                 for gt, gv in md_obj.get("grouping", {}).items():
                     file_obj["grouping"][gt] = gv
 
+                # close th file
+                obj.close()
+
+                # save the items to the catalog by walking the group tree
                 cur_node = self._catalog
+                logger.debug(file_obj)
+
                 # pivot into the grouping structure...
                 for gt, gv in md_obj.get("grouping", {}).items():
                     if not gv:
@@ -236,8 +242,5 @@ class LostCat():
                 # save the file item at the botto,
                 cur_node["files"]  = []
                 cur_node["files"].append(file_obj)
-
-                # close th file
-                obj.close()
 
         return data

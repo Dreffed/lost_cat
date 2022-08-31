@@ -8,9 +8,29 @@ from lost_cat.utils.path_utils import build_path, get_filename
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# check the catalog artifacts - Modality
+# 'Modality' -> 'BodyPartExamined' -> 'PhotometricInterpretation' -> 'StudyInstanceUID' -> 'SeriesInstanceUID' -> 'SeriesInstanceUID'
+def unroll(node: dict, indent: int = 0, max: int = 4):
+    """simple unroller"""
+    if indent >= max or not node:
+        return
+
+    pad = "\t"*indent
+    if isinstance(node, dict):
+        for k,v in node.items():
+            print(f"{pad}{k}")
+            unroll(v, indent+1)
+
+    elif isinstance(node, list):
+        l = len(node)
+        print(f"{pad}{l}")
+    else:
+        print(f"{pad}{node}")
+
 # set up the paths
 paths = []
-paths.append(os.path.join("D:\\", "users", "ms", "MSO - thoughtswinsystems.com", "OneDrive - thoughtswinsystems.com", "Sample Data"))
+paths.append(os.path.join("D:\\", "users", "ms", "MSO - thoughtswinsystems.com",
+        "OneDrive - thoughtswinsystems.com", "Sample Data"))
 paths.append(get_filename({'root':'.', 'folders':['tests', 'data']}))
 
 for p_uri in paths:
@@ -24,4 +44,16 @@ for idx, p_uri in enumerate(paths):
 
 res_obj = l_cat.catalog_artifacts()
 logger.info(res_obj)
+
+for k,v in l_cat._artifacts.items():
+    print(k)
+    break
+
+cat_obj = l_cat.process_artifacts()
+logger.info(cat_obj)
+
+for k,v in l_cat._catalog.items():
+    print(k, v)
+
+
 

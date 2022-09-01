@@ -15,6 +15,8 @@ import zipfile
 from urllib.parse import urlparse
 from validators import url as val_url
 
+from lost_cat.utils.name_utils import PhraseTool
+
 logger = logging.getLogger(__name__)
 
 class SourceDoesNotExist(Exception):
@@ -174,6 +176,10 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
             "file" : filename,
             "ext": ext.lower()
     }
+
+    if options and options.get("profile"):
+        p_obj = PhraseTool(in_phrase=filename)
+        file_dict["profile"] = p_obj.get_metadata()
 
     if options and options.get("splitextention"):
         file_dict["file"] = fname

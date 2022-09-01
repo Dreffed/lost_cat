@@ -47,7 +47,7 @@ class LostCat():
         - it will also scan and index archive files (zip only atm)
     - provide a set of tools to move, relabel, and so on to help organize
     """
-    def __init__(self) -> None:
+    def __init__(self, options: dict = None) -> None:
         """Initialize the core elements"""
         # a labelled dic of sources,
         # sources are parsed to an object
@@ -60,6 +60,15 @@ class LostCat():
         self._tags_exp = dict()
         self._group_tags = dict()
         self._set_alias_tags = dict()
+
+        # set the objects
+        if options:
+            self._options = options
+        else:
+            # default to create a phrase profile for the filename
+            self.options = {
+                "profile": True
+            }
 
         # a local store for the disovered artifacts
         self._artifacts = {
@@ -144,7 +153,7 @@ class LostCat():
 
             uri = os.path.join(uri_obj.get("root"), *uri_obj.get("folders",[]))
 
-            for fnd_file in scan_files(uri):
+            for fnd_file in scan_files(uri, options=self._options):
                 # process the returned files...
                 if not fnd_file.get("path","") in self._artifacts.get("files", {}):
                     file_added +=1

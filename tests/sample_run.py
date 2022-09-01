@@ -46,5 +46,3 @@ logger.info(res_obj)
 
 cat_obj = l_cat.process_artifacts()
 logger.info(cat_obj)
-
-

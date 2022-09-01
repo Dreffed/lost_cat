@@ -29,9 +29,8 @@ def unroll(node: dict, indent: int = 0, max: int = 4):
 
 # set up the paths
 paths = []
-paths.append(os.path.join("D:\\", "users", "ms", "MSO - thoughtswinsystems.com",
-        "OneDrive - thoughtswinsystems.com", "Sample Data"))
 paths.append(get_filename({'root':'.', 'folders':['tests', 'data']}))
+logger.info(paths)
 
 for p_uri in paths:
     logger.info(p_uri)
@@ -45,15 +44,7 @@ for idx, p_uri in enumerate(paths):
 res_obj = l_cat.catalog_artifacts()
 logger.info(res_obj)
 
-for k,v in l_cat._artifacts.items():
-    print(k)
-    break
-
 cat_obj = l_cat.process_artifacts()
 logger.info(cat_obj)
-
-for k,v in l_cat._catalog.items():
-    print(k, v)
-
 
 

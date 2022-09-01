@@ -66,7 +66,7 @@ class LostCat():
             self._options = options
         else:
             # default to create a phrase profile for the filename
-            self.options = {
+            self._options = {
                 "profile": True
             }
 

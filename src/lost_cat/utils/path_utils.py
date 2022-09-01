@@ -15,7 +15,7 @@ import zipfile
 from urllib.parse import urlparse
 from validators import url as val_url
 
-from lost_cat.utils.name_utils import PhraseTool
+from lost_cat.utils.phrase_utils import PhraseTool
 
 logger = logging.getLogger(__name__)
 
@@ -266,19 +266,21 @@ def is_include(file_dict: dict, options: dict = None) -> bool:
         return True
 
     filter_config = options.get("filter")
-    output = {}
-    if filter_config:
-        if "exts" in filter_config:
-            output["ext"] = 0
-            if file_dict.get("ext","") in filter_config.get("exts", []):
-                output["ext"] = 1
+    if not filter_config:
+        return True
 
-        if "regex" in filter_config:
-            output["regex"] = 0
-            filter_reg = re.compile(filter_config.get("regex", ""))
-            m_re = filter_reg.match(file_dict.get("name",""))
-            if m_re:
-                output["regex"] = 1
+    output = {}
+    if "exts" in filter_config:
+        output["ext"] = 0
+        if file_dict.get("ext","") in filter_config.get("exts", []):
+            output["ext"] = 1
+
+    if "regex" in filter_config:
+        output["regex"] = 0
+        filter_reg = re.compile(filter_config.get("regex", ""))
+        m_re = filter_reg.match(file_dict.get("name",""))
+        if m_re:
+            output["regex"] = 1
 
     return len(output) == sum(output.values)
 

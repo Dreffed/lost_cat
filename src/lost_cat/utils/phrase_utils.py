@@ -85,23 +85,3 @@ class PhraseTool:
             "expand": in_phrase
         }
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    strings = [
-        '1.4ProtectionOfPrivacy-InformationIncidents(PrivacyBreaches)',
-        'DS1 12345',
-        'DS9 98765',
-        'AN12 1234567',
-        'Accept Form 20220415',
-        '564218 - Undertaking - Anytown Road',
-        'Smalltoen Cleft - X5623771',
-        "C:\\users\\user\\files\\BLUE_CARD_VISA_CARD_1504_Oct_25-2021.pdf"
-    ]
-
-    for phrase in strings:
-        obj = PhraseTool(in_phrase=phrase)
-        print(obj)
-
-        pr = obj.get_metadata()
-        print(f"==={phrase}\n{pr}\n\n")

@@ -54,7 +54,7 @@ def func_switch_zip(ext: str, op_label: str) -> object:
     return func.get(ext,{}).get(op_label)
 
 
-def build_path(uri: str) -> dict:
+def build_path(uri: str, path_type: str = "file") -> dict:
     """Will take a path, and split into components
     and return a dictionary
     {
@@ -71,22 +71,37 @@ def build_path(uri: str) -> dict:
         "folders": []
     }
 
-    if os.path.exists(uri):
+    logger.debug("Check: %s\t:%s\t:%s ", r"[\\\/\.]+", uri, re.search(r"[\\\/\.]+", uri))
+
+    if val_url(uri):
+        src["type"] = "http"
+
+        url_obj = urlparse(uri)
+        src["scheme"] = url_obj.scheme
+        src["netloc"] = url_obj.netloc
+        src["path"] = url_obj.path
+        src["params"] = url_obj.params
+        src["query"] = url_obj.query
+        src["fragment"] = url_obj.fragment
+
+    elif re.search(r"[\\\/\.]+", uri):
+        uri = os.path.expandvars(os.path.expanduser(uri))
         drv, path = os.path.splitdrive(uri)
+        
+        if os.path.exists(uri):
+            if os.path.isdir(uri):
+                src["type"] = "folder"
 
-        if os.path.isdir(uri):
-            src["type"] = "folder"
+            elif os.path.isfile(uri):
+                src["type"] = "file"
+        else:
+            src["type"] = path_type
 
-        elif os.path.isfile(uri):
-            src["type"] = "file"
+        if src["type"] == "file":
             path, filename = os.path.split(path)
             name, ext = os.path.splitext(filename)
             src["name"] = name
             src["ext"] = ext.lower()
-
-        else:
-            # not
-            raise SourceNotValid(uri=uri, message="path failed file and folder test!")
 
         folders = []
         while len(path) > 1:
@@ -97,17 +112,6 @@ def build_path(uri: str) -> dict:
         folders.reverse()
         src["folders"] = folders
         src["root"] = f"{drv}{os.sep}"
-
-    elif val_url(uri):
-        src["type"] = "http"
-
-        url_obj = urlparse(uri)
-        src["scheme"] = url_obj.scheme
-        src["netloc"] = url_obj.netloc
-        src["path"] = url_obj.path
-        src["params"] = url_obj.params
-        src["query"] = url_obj.query
-        src["fragment"] = url_obj.fragment
 
     else:
         raise SourceNotHandled(uri=uri, message="provided uri could not be understood by parser!")
@@ -122,7 +126,7 @@ def get_filename(file_dict: dict) -> str:
             "folder":   str     (optional)
             "folders":  []      (optional)
             "name":     str     (optional)
-            "ext":              expects a "."
+            "ext":              (optional) expects "." prefix
         }
         <TODO: Add handler for type = http etc.>
     """

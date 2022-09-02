@@ -37,23 +37,21 @@ class DICOM_Parser():
         """Allows for the metadata tags to be anonymized"""
         self._anon = anonimizer
 
-    def set_group_tags(self, tags: dict) -> None:
+    def set_group_tags(self, tags: list) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
         self._grp_tags = tags
 
-    def set_export_tags(self, tags):
+    def set_export_tags(self, tags: list):
         """Sets the tags to use for general metadata"""
         self._export_tags = tags
 
-    def get_functions(self):
-        """
+    def get_functions(self) -> dict:
+        """ 
 
-        Parameters
-        ----------
         Returns
         -------
-        None
+        dict
         """
         return {
             "metadata": self.get_metadata,
@@ -61,20 +59,22 @@ class DICOM_Parser():
             "export": self.get_convertedimage
         }
 
-    def get_extensions(self):
-        """
-
-        Parameters
-        ----------
+    def get_extensions(self) -> list:
+        """ lists what extensions this parser applies to
 
         Returns
         -------
-        None
+        list: 
         """
         return [".dcm"]
 
-    def set_alias_tags(self, tags):
-        """The alias tag do a simple replacement with another tag"""
+    def set_alias_tags(self, tags: list) -> None:
+        """The alias tag do a simple replacement with another tag
+        
+        Parameters
+        ----------
+        
+        """
         self._alias_tags = tags
 
     def get_tag(self, tag_id: str) -> dict:
@@ -84,9 +84,6 @@ class DICOM_Parser():
     def get_metadata(self) -> dict:
         """This will return the doc info infomation from the
         Named file.
-
-        Parameters
-        ----------
 
         Returns
         -------
@@ -98,12 +95,9 @@ class DICOM_Parser():
     def get_image(self) -> dict:
         """This will return the paragroah objects in a word document
 
-        Parameters
-        ----------
-
         Returns
         -------
-        None
+        dict
         """
         if not hasattr(self._dcm_file, "SliceLocation"):
             # missing a slice location...
@@ -115,31 +109,43 @@ class DICOM_Parser():
         return data
 
     def get_convertedimage(self, conversion: str) -> dict:
-        """will use the conversion string, and return an array of image data"""
+        """will use the conversion string, and return an array of image data
+        Returns
+        -------
+        dict: the 
+        """
+
         pass
 
     def _prep_tags(self) -> dict:
-        """generates an obj of the exp and grp tags..."""
+        """generates an obj of the anonimized exp and grp tags...
+        
+        Returns
+        -------
+        dict:   the tag data extracted from the underlying file and grouped
+                by group tag lsit, and export
+
+        """
         data = {
             "grouping": {},
             "metadata": {}
         }
 
-        for t in self._grp_tags:
+        for tag in self._grp_tags:
             # chjeck for PI data...
-            t = self._alias_tags.get(t,t)
+            tag = self._alias_tags.get(tag,tag)
 
-            if self._anon.is_pii(t):
-                data["grouping"][t] = self._anon.get_anon(tag=t, value=self._dcm_file.get(t))
+            if self._anon.is_pii(tag):
+                data["grouping"][tag] = self._anon.get_anon(tag=tag, value=self._dcm_file.get(tag))
             else:
-                data["grouping"][t] = self._dcm_file.get(t)
+                data["grouping"][tag] = self._dcm_file.get(tag)
 
-        for t in self._export_tags:
-            t = self._alias_tags.get(t,t)
+        for tag in self._export_tags:
+            tag = self._alias_tags.get(tag,tag)
             # chjeck for PI data...
-            if self._anon.is_pii(t):
-                data["metadata"][t] = self._anon.get_anon(tag=t, value=self._dcm_file.get(t))
+            if self._anon.is_pii(tag):
+                data["metadata"][tag] = self._anon.get_anon(tag=tag, value=self._dcm_file.get(tag))
             else:
-                data["metadata"][t] = self._dcm_file.get(t)
+                data["metadata"][tag] = self._dcm_file.get(tag)
 
         return data

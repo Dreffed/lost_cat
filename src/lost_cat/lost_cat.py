@@ -3,7 +3,8 @@ Lost cat will scan and process a range of files
 """
 import os
 import logging
-from .utils.path_utils import build_path, scan_files, func_switch_zip
+import shelve
+from .utils.path_utils import build_path, get_filename, scan_files, func_switch_zip
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,28 @@ class LostCat():
         - it will also scan and index archive files (zip only atm)
     - provide a set of tools to move, relabel, and so on to help organize
     """
-    def __init__(self, options: dict = None) -> None:
-        """Initialize the core elements"""
+    name = "LostCat"
+    version = "0.0.3"
+    
+    def __init__(self, options: dict = None, shelve_paths: dict = None) -> None:
+        """Initialize the core elements
+        
+        Parameters
+        ----------
+        opttion : dict  A dict that sets the search options for the syste,
+            {
+                "profile":          will profile the filename of the artifact
+                "splitextension":   will split of the extension from the name
+                "splitfolders":     will break the folders in an list of folders
+                "stats":            will collect the system stats for the file
+                "generatehash":     will generate a MD5 and SHA1 hash of the file
+                "maxhashsize"       will limt the hash size scanned
+                "filter":           if set will apply a filter check during the scan
+                    "ext":          a list of extensions to include in the scan .<ext>
+                    "regex":        a regex to apply to the file to select
+            }
+        
+        """
         # a labelled dic of sources,
         # sources are parsed to an object
         self._sources = dict()
@@ -70,14 +91,30 @@ class LostCat():
                 "profile": True
             }
 
-        # a local store for the disovered artifacts
-        self._artifacts = {
-            "files": dict()
+        # shelve root is the base oath for the shelve file
+        # this program will create a shelve for each function run...
+        # artifacts - augmented with meatadata and file information
+        if shelve_root:
+            artifact_path = build_path(uri=shelve_root, path_type="file")
+        else:
+            artifact_path = build_path(uri=f"data/{self.name}_{self.version}.artifacts.db", path_type="file")
+
+        self._paths = {
+            "artifacts": artifact_path
         }
+
+        # a local store for the disovered artifacts
+        self._artifacts = shelve.open(self._paths.get("artifacts",""))
+        if "files" not in self._artifacts:
+            self._artifacts["files"] = {}
 
         # a place to store the processed artifacts, organized
         # by the grouping, and with metadata...
         self._catalog = dict()
+
+    def close(self) -> None:
+        """Will save the shelve to the OS"""
+        self._artifacts.close()
 
     def add_source(self, label: str, uri: str, overwrite: bool = False) -> dict:
         """It parse the provided source path and

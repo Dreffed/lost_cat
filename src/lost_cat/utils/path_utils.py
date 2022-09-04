@@ -12,6 +12,11 @@ import tarfile
 import time
 import zipfile
 
+try:
+    from os import scandir, DirEntry
+except ImportError:
+    from scandir import scandir, DirEntry
+
 from urllib.parse import urlparse
 from validators import url as val_url
 
@@ -53,6 +58,21 @@ def func_switch_zip(ext: str, op_label: str) -> object:
     }
     return func.get(ext,{}).get(op_label)
 
+def split_folder(path: str) -> list:
+    """Will split the folder path in to a list of folders"""
+    allparts = []
+    while 1:
+        parts = os.path.split(path)
+        if parts[0] == path:  # sentinel for absolute paths
+            allparts.insert(0, parts[0])
+            break
+        elif parts[1] == path: # sentinel for relative paths
+            allparts.insert(0, parts[1])
+            break
+        else:
+            path = parts[0]
+            allparts.insert(0, parts[1])
+    return allparts
 
 def build_path(uri: str, path_type: str = "file") -> dict:
     """Will take a path, and split into components
@@ -87,7 +107,7 @@ def build_path(uri: str, path_type: str = "file") -> dict:
     elif re.search(r"[\\\/\.]+", uri):
         uri = os.path.expandvars(os.path.expanduser(uri))
         drv, path = os.path.splitdrive(uri)
-        
+
         if os.path.exists(uri):
             if os.path.isdir(uri):
                 src["type"] = "folder"
@@ -131,7 +151,7 @@ def get_filename(file_dict: dict) -> str:
         <TODO: Add handler for type = http etc.>
     """
 
-    logger.debug("F: %s", file_dict)
+    #logger.debug("F: %s", file_dict)
     if file_dict.get("root") == ".":
         file_dict["root"] = os.getcwd()
         logger.debug("using current drive %s", file_dict.get("root"))
@@ -181,25 +201,11 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
             "ext": ext.lower()
     }
 
-    if options and options.get("profile"):
-        p_obj = PhraseTool(in_phrase=filename)
-        file_dict["profile"] = p_obj.get_metadata()
-
-    if options and options.get("splitextention"):
+    if options and options.get("splitextension"):
         file_dict["file"] = fname
 
     if options and options.get("splitfolders"):
-        #file_dict["folders"] = splitall(dirpath)
-        pass
-
-    if options and options.get("stats"):
-        time_format = "%Y-%m-%d %H:%M:%S"
-        file_stats = os.stat(uri)
-        file_dict["accessed"] = time.strftime(time_format,time.localtime(file_stats.st_atime))
-        file_dict["modified"] = time.strftime(time_format,time.localtime(file_stats.st_mtime))
-        file_dict["created"] = time.strftime(time_format,time.localtime(file_stats.st_ctime))
-        file_dict["size"] = file_stats.st_size
-        file_dict["mode"] = file_stats.st_mode
+        file_dict["folders"] = split_folder(dirpath)
 
     return file_dict
 
@@ -211,7 +217,7 @@ def make_hash(uri: str, buff_size: int = 65536) -> dict:
 
     try:
         if os.path.exists(uri):
-            logger.debug('%s', uri)
+            #logger.debug('%s', uri)
             with open(uri, 'rb') as f_io:
                 while True:
                     d_bytes = f_io.read(buff_size)
@@ -234,34 +240,88 @@ def make_hash(uri: str, buff_size: int = 65536) -> dict:
 
     return hashes
 
+def fast_scan(uri: str) -> DirEntry:
+    """"""
+    for os_obj in scandir(path=uri):
+        try:
+            if os_obj.is_dir(follow_symlinks=False):
+                yield from fast_scan(uri=os_obj.path)
+            else:
+                if os_obj.is_file():
+                    #logger.debug(os_obj)
+                    yield os_obj
+
+        except PermissionError:
+            logger.error("Permission Error: %s", os_obj.path)
+
 def scan_files(uri: str, options: dict = None) -> dict:
     """Will scan the folder and walk the files and folders below
     yields the found file"""
-    for dirpath, _, filenames in os.walk(uri):
-        for fullname in filenames:
-            filepath = os.path.join(dirpath,fullname)
-            file_dict = get_file_metadata(uri=filepath, options=options)
-            ext = file_dict.get("ext","")
+    for os_obj in fast_scan(uri=uri):
+        try:
+            drv, path = os.path.splitdrive(os_obj.path)
+            dirpath = os.path.dirname(path)
+            filename = os.path.basename(path)
+            fname, ext = os.path.splitext(filename)
+
+            f_type = "file" if os_obj.is_file() else "folder"
+
+            file_dict =  {
+                    "type":f_type,
+                    "root": f"{drv}{os.sep}",
+                    "folder" : dirpath,
+                    "file" : filename,
+                    "ext": ext.lower()
+            }
+
+            if options and options.get("splitextension"):
+                file_dict["file"] = fname
+
+            if options and options.get("splitfolders"):
+                file_dict["folders"] = dirpath.split(os.sep) #split_folder(dirpath)
 
             # filter the files...
             if not is_include(file_dict=file_dict, options=options):
                 continue
 
+            if options and options.get("stats"):
+                time_format = "%Y-%m-%d %H:%M:%S"
+                file_stats = os.stat(uri)
+                file_dict["accessed"] = time.strftime(time_format,
+                        time.localtime(file_stats.st_atime))
+                file_dict["modified"] = time.strftime(time_format,
+                        time.localtime(file_stats.st_mtime))
+                file_dict["created"] = time.strftime(time_format,
+                        time.localtime(file_stats.st_ctime))
+                file_dict["size"] = file_stats.st_size
+                file_dict["mode"] = file_stats.st_mode
+
+            if options and options.get("profile"):
+                p_obj = PhraseTool(in_phrase=file_dict.get("file",""))
+                file_dict["profile"] = p_obj.get_metadata()
+
             # handel the options for hash
             if options and options.get("generatehash"):
                 maxsize = options.get("maxhashsize", 0)
                 if maxsize == 0 or maxsize >= file_dict.get("size",0):
-                    file_dict["hash"] = make_hash(uri=filepath)
+                    file_dict["hash"] = make_hash(uri=os_obj.path)
 
             op_func = func_switch_zip(ext, "scan")
             if op_func:
-                zfiles = op_func(uri=filepath)
-
+                zfiles = op_func(uri=os_obj.path)
                 file_dict["files"] = zfiles
                 yield file_dict
 
             else:
                 yield file_dict
+
+        except SourceDoesNotExist as ex:
+            logger.error('URI: %s %s', os_obj.path, ex)
+        except zipfile.BadZipFile as ex:
+            logger.error('URI: %s %s', os_obj.path, ex)
+        except PermissionError as ex:
+            logger.error("Permission Error: %s %s", os_obj.path, ex)
+
 
 def is_include(file_dict: dict, options: dict = None) -> bool:
     """will use the filter conditions and if all filters are matched

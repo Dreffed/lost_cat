@@ -4,6 +4,7 @@ Lost cat will scan and process a range of files
 import os
 import logging
 import shelve
+import time
 from .utils.path_utils import build_path, get_filename, scan_files, func_switch_zip
 
 logger = logging.getLogger(__name__)
@@ -50,13 +51,13 @@ class LostCat():
     """
     name = "LostCat"
     version = "0.0.3"
-    
+
     def __init__(self, options: dict = None, shelve_paths: dict = None) -> None:
         """Initialize the core elements
-        
+
         Parameters
         ----------
-        opttion : dict  A dict that sets the search options for the syste,
+        opttion : dict      A dict that sets the search options for the syste,
             {
                 "profile":          will profile the filename of the artifact
                 "splitextension":   will split of the extension from the name
@@ -68,7 +69,12 @@ class LostCat():
                     "ext":          a list of extensions to include in the scan .<ext>
                     "regex":        a regex to apply to the file to select
             }
-        
+
+        shelve_paths: dict  A dict of paths to use for the components
+            {
+                "artifcats":        path to artifacts shelve file
+            }
+
         """
         # a labelled dic of sources,
         # sources are parsed to an object
@@ -88,25 +94,29 @@ class LostCat():
         else:
             # default to create a phrase profile for the filename
             self._options = {
-                "profile": True
+                "profile": True,
+                "splitfolders": True,
+                "splitextension": True,
+                "stats": True
             }
 
         # shelve root is the base oath for the shelve file
         # this program will create a shelve for each function run...
         # artifacts - augmented with meatadata and file information
-        if shelve_root:
-            artifact_path = build_path(uri=shelve_root, path_type="file")
+        if not shelve_paths:
+            artifact_path = build_path(uri=f"data\\{self.name}_{self.version}.artifacts",
+                    path_type="file")
+            self._paths = {
+                "artifacts": get_filename(file_dict=artifact_path)
+            }
         else:
-            artifact_path = build_path(uri=f"data/{self.name}_{self.version}.artifacts.db", path_type="file")
-
-        self._paths = {
-            "artifacts": artifact_path
-        }
+            self._paths = shelve_paths
 
         # a local store for the disovered artifacts
-        self._artifacts = shelve.open(self._paths.get("artifacts",""))
-        if "files" not in self._artifacts:
-            self._artifacts["files"] = {}
+        logger.info("Shelve file: %s", self._paths.get("artifacts", "<missing>"))
+        self._artifacts = shelve.open(self._paths.get("artifacts", "<missing>"))
+
+        logger.debug("artifacts:\t%s ", len(self._artifacts))
 
         # a place to store the processed artifacts, organized
         # by the grouping, and with metadata...
@@ -114,6 +124,7 @@ class LostCat():
 
     def close(self) -> None:
         """Will save the shelve to the OS"""
+        logger.debug("Closing shelve %s", len(self._artifacts))
         self._artifacts.close()
 
     def add_source(self, label: str, uri: str, overwrite: bool = False) -> dict:
@@ -184,32 +195,54 @@ class LostCat():
         <<for web addresses, it'll need a scraper built>>"""
         file_added = 0
         zip_added = 0
+        start = time.time()
+
         for _, uri_obj in self._sources.items():
             if uri_obj.get("type") not in ["folder"]:
                 continue
 
             uri = os.path.join(uri_obj.get("root"), *uri_obj.get("folders",[]))
+            if not os.path.exists(uri):
+                logging.error("URI doesn't exisit %s", uri)
 
-            for fnd_file in scan_files(uri, options=self._options):
+            start_location = time.time()
+
+            for idx, fnd_file in enumerate(scan_files(uri, options=self._options)):
+                file_path = get_filename(fnd_file)
+                #
+
                 # process the returned files...
-                if not fnd_file.get("path","") in self._artifacts.get("files", {}):
+                if not file_path in self._artifacts:
                     file_added +=1
-                    self._artifacts["files"][fnd_file.get("path")] = fnd_file
+                    self._artifacts[file_path] = fnd_file
 
+                # check it is a zip file items...
                 for zip_file in fnd_file.get("files",{}) :
-                    if not zip_file.get("path","") in self._artifacts.get("files", {}):
+                    if not zip_file.get("path") in self._artifacts:
                         zip_added +=1
-                        self._artifacts["files"][zip_file.get("path")] = zip_file
+                        self._artifacts[zip_file.get("path")] = zip_file
 
-        cat_cnt = len(self._artifacts.get("files"))
+                # print out the srtatus
+                if idx % self._options.get("status_count", 10000) == 0:
+                    logger.debug("Example: %s", fnd_file)
+                    logger.info("Status: %s Time: %s Added: %s Total: %s",
+                            idx, time.time() - start_location,
+                            file_added, len(self._artifacts))
+
+        cat_cnt = len(self._artifacts)
         return {
             "files": file_added,
             "zipped": zip_added,
-            "cataloged": cat_cnt
+            "cataloged": cat_cnt,
+            "duration": time.time() - start
         }
 
-    def process_artifacts(self) -> dict:
+    def process_parsers(self) -> dict:
         """Will scan the loaded files into the catalog and apply the PARSER"""
+        if "parser" not in self._features:
+            raise FeatureNotImplemented(label="Feature", feature="parser",
+                    message="parser feature not implemented!")
+
         z_path = None
         z_ext = None
         zip_obj = None
@@ -217,7 +250,7 @@ class LostCat():
         data = {}
 
         # scan the files and zips...
-        for _, file_obj in self._artifacts.get("files", {}).items():
+        for _, file_obj in self._artifacts.items():
             f_ext = file_obj.get("ext","<>")
             if f_ext not in data:
                 data[f_ext] = 0
@@ -236,8 +269,8 @@ class LostCat():
                         z_ext = z_ext.lower()
                         z_func = func_switch_zip(ext=z_ext, op_label="open")
 
-                        logger.debug(z_path)
-                        logger.debug(z_func)
+                        #logger.debug(z_path)
+                        #logger.debug(z_func)
                         zip_obj = z_func(uri=z_path)
 
                     if zip_obj:
@@ -247,7 +280,7 @@ class LostCat():
                 else:
                     obj = cls(uri=file_obj.get("path"))
 
-                logger.debug("Running Class %s -> %s", p_label, cls)
+                #logger.debug("Running Class %s -> %s", p_label, cls)
 
                 # load the anonimizer
                 obj.set_anonimizer(anonimizer=self._anonimizer)
@@ -275,7 +308,7 @@ class LostCat():
 
                 # save the items to the catalog by walking the group tree
                 cur_node = self._catalog
-                logger.debug(file_obj)
+                #logger.debug(file_obj)
 
                 # pivot into the grouping structure...
                 for gt, gv in md_obj.get("grouping", {}).items():

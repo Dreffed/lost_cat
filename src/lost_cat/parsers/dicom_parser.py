@@ -47,7 +47,7 @@ class DICOM_Parser():
         self._export_tags = tags
 
     def get_functions(self) -> dict:
-        """ 
+        """
 
         Returns
         -------
@@ -64,16 +64,16 @@ class DICOM_Parser():
 
         Returns
         -------
-        list: 
+        list:
         """
         return [".dcm"]
 
     def set_alias_tags(self, tags: list) -> None:
         """The alias tag do a simple replacement with another tag
-        
+
         Parameters
         ----------
-        
+
         """
         self._alias_tags = tags
 
@@ -112,14 +112,14 @@ class DICOM_Parser():
         """will use the conversion string, and return an array of image data
         Returns
         -------
-        dict: the 
+        dict: the
         """
 
         pass
 
     def _prep_tags(self) -> dict:
         """generates an obj of the anonimized exp and grp tags...
-        
+
         Returns
         -------
         dict:   the tag data extracted from the underlying file and grouped

@@ -6,6 +6,7 @@ import logging
 import shelve
 import time
 from .utils.path_utils import build_path, get_filename, scan_files, func_switch_zip
+from .database.db_utils import DBEngine
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,9 @@ class LostCat():
     name = "LostCat"
     version = "0.0.3"
 
-    def __init__(self, options: dict = None, shelve_paths: dict = None) -> None:
+    def __init__(self, options: dict = None,
+            shelve_paths: dict = None,
+            db_connection: dict = None) -> None:
         """Initialize the core elements
 
         Parameters
@@ -94,7 +97,6 @@ class LostCat():
         else:
             # default to create a phrase profile for the filename
             self._options = {
-                "profile": True,
                 "splitfolders": True,
                 "splitextension": True,
                 "stats": True
@@ -103,20 +105,16 @@ class LostCat():
         # shelve root is the base oath for the shelve file
         # this program will create a shelve for each function run...
         # artifacts - augmented with meatadata and file information
-        if not shelve_paths:
-            artifact_path = build_path(uri=f"data\\{self.name}_{self.version}.artifacts",
-                    path_type="file")
-            self._paths = {
-                "artifacts": get_filename(file_dict=artifact_path)
-            }
-        else:
+        if shelve_paths:
             self._paths = shelve_paths
 
-        # a local store for the disovered artifacts
-        logger.info("Shelve file: %s", self._paths.get("artifacts", "<missing>"))
-        self._artifacts = shelve.open(self._paths.get("artifacts", "<missing>"))
-
-        logger.debug("artifacts:\t%s ", len(self._artifacts))
+            # a local store for the disovered artifacts
+            logger.info("Shelve file: %s", self._paths.get("artifacts", "<missing>"))
+            self._artifacts = shelve.open(self._paths.get("artifacts", "<missing>"))
+        elif db_connection:
+            self._paths = db_connection
+            logger.info("Database: %s", self._paths.get("database", "<missing>"))
+            self._db = DBEngine(connString=self._paths.get("database", "lost-cat.db"))
 
         # a place to store the processed artifacts, organized
         # by the grouping, and with metadata...

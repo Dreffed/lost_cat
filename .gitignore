@@ -128,8 +128,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .pypirc
-data/artifacts.220904.bak
-data/artifacts.220904.dat
-data/artifacts.220904.dir
-data/artifacts.dat
-data/artifacts.dir
+
+# mniscellaneous
+*.db
+*.dat
+*.bak
+*.directory
+data/
+clips.py

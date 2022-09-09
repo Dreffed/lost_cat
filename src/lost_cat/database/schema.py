@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
 
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import registry, relationship
+from sqlalchemy import Column, Integer, String, DateTime, exists
+from sqlalchemy.orm import registry, relationship, column_property
 from sqlalchemy.schema import PrimaryKeyConstraint, UniqueConstraint, ForeignKey
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class LCItemVersions:
     iv_modified:   datetime = field(default=None, metadata={"sa": Column(DateTime)})
 
     lci_metadata:   List[LCItemMetadata] = field(default_factory=list,
-            metadata={"sa": relationship("LCItemMetadata")})
+            metadata={"sa": relationship("LCItemMetadata", backref="itemversions")})
 
 @mapper_registry.mapped
 @dataclass
@@ -92,7 +92,7 @@ class LCItems:
     lci_ext:        str = field(default=None, metadata={"sa": Column(String(10))})
 
     lci_versions:   List[LCItemVersions] = field(default_factory=list,
-            metadata={"sa": relationship("LCItemVersions")})
+            metadata={"sa": relationship("LCItemVersions", backref="items")})
 
 @mapper_registry.mapped
 @dataclass
@@ -112,7 +112,7 @@ class SubPaths:
     sp_uri:         str = field(default=None, metadata={"sa": Column(String(4048))})
 
     sp_items:       List[LCItems] = field(default_factory=list,
-            metadata={"sa": relationship("LCItems")})
+            metadata={"sa": relationship("LCItems", backref="subpaths")})
 
 @mapper_registry.mapped
 @dataclass
@@ -149,12 +149,12 @@ class SourceUris:
     s_auth:         str = field(default=None, metadata={"sa": Column(String(10))})
         # None | Token | User:Pass | OAuth
     sa_paths:       list[SubPaths] = field(default_factory=list,
-            metadata={"sa": relationship("SubPaths")})
+            metadata={"sa": relationship("SubPaths", backref="sourceuris")})
 
 @mapper_registry.mapped
 @dataclass
 class SourceMaps:
-    """"""
+    """The brige table for uris to values"""
     __tablename__ = "sourcemaps"
     __sa_dataclass_metadata_key__ = "sa"
     __table_args__ = (PrimaryKeyConstraint("sv_id", "s_id", name="sm_ids"), )
@@ -186,7 +186,7 @@ class NameProfiles:
     """Stored the breakdown of the names discovered"""
     __tablename__ = "nameprofiles"
     __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (PrimaryKeyConstraint("pr_phrase", name="pr_unc"), )
+    __table_args__ = (UniqueConstraint("pr_phrase", name="pr_unc"), )
 
     pr_id:          int = field(
             init=False, metadata={"sa": Column(Integer, primary_key=True)}
@@ -195,4 +195,4 @@ class NameProfiles:
     pr_short:       str = field(default=None, metadata={"sa": Column(String(50))})
     pr_normal:      str = field(default=None, metadata={"sa": Column(String(255))})
     pr_parts:       list[NameProfileParts] = field(default_factory=list,
-            metadata={"sa": relationship("NameProfileParts")})
+            metadata={"sa": relationship("NameProfileParts", backref="nameprofiles")})

@@ -5,8 +5,13 @@ import os
 import logging
 import shelve
 import time
-from .utils.path_utils import build_path, get_filename, scan_files, func_switch_zip
 from .database.db_utils import DBEngine
+from .database.schema import SourceMaps, SourceUris, SubPaths, SourceValues, LCItems ,LCItemVersions, NameProfiles, NameProfileParts, mapper_registry
+from .utils.path_utils import build_path, get_filename, scan_files, func_switch_zip
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker, session
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +130,24 @@ class LostCat():
         logger.debug("Closing shelve %s", len(self._artifacts))
         self._artifacts.close()
 
+    def load_db_sources(self):
+        """will read the sources from the db"""
+        if not self._db:
+            return
+
+        # load in the tables from the source system...
+        db_sess = self._db.session()
+
+        rows = list(db_sess.execute(select(SourceUris).order_by(SourceUris.s_type)))
+        for r in rows:
+            logger.info(r)
+
+        rows = list(db_sess.execute(select(SourceValues).order_by(SourceValues.sv_label)))
+        for r in rows:
+            logger.info(r)
+
+        
+
     def add_source(self, label: str, uri: str, overwrite: bool = False) -> dict:
         """It parse the provided source path and
         add to the source list."""
@@ -195,7 +218,7 @@ class LostCat():
         zip_added = 0
         start = time.time()
 
-        for _, uri_obj in self._sources.items():
+        for uri_obj in self._sources.items():
             if uri_obj.get("type") not in ["folder"]:
                 continue
 

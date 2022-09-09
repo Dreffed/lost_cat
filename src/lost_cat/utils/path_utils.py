@@ -3,6 +3,7 @@ file scanning and zip file handling.
 @author: Dreffed
 copyright adscens.io 2022 / thoughtswin systems 2022
 """
+from datetime import datetime
 import hashlib
 import io
 import logging
@@ -10,6 +11,7 @@ import re
 import os
 import tarfile
 import time
+from time import mktime
 import zipfile
 
 try:
@@ -171,7 +173,7 @@ def get_filename(file_dict: dict) -> str:
 
 def get_file_metadata(uri: str, options: dict = None) -> dict:
     """return dict of file meats data based on the options passed
-        "file": the file name of the file, if "splitextension" specified it is
+        "name": the file name of the file, if "splitextension" specified it is
                 just the filename not extension
         "ext": the dotted extension of the file
         "folder"L the folder path of the file
@@ -197,15 +199,23 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
             "type":f_type,
             "root": f"{drv}{os.sep}",
             "folder" : dirpath,
-            "file" : filename,
+            "name" : filename,
             "ext": ext.lower()
     }
 
     if options and options.get("splitextension"):
-        file_dict["file"] = fname
+        file_dict["name"] = fname
 
     if options and options.get("splitfolders"):
         file_dict["folders"] = split_folder(dirpath)
+
+    if options and options.get("stats"):
+        file_stats = os.stat(uri)
+        file_dict["accessed"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_atime))) #
+        file_dict["modified"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_mtime)))
+        file_dict["created"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_ctime)))
+        file_dict["size"] = file_stats.st_size
+        file_dict["mode"] = file_stats.st_mode
 
     return file_dict
 
@@ -270,12 +280,12 @@ def scan_files(uri: str, options: dict = None) -> dict:
                     "type":f_type,
                     "root": f"{drv}{os.sep}",
                     "folder" : dirpath,
-                    "file" : filename,
+                    "name" : filename,
                     "ext": ext.lower()
             }
 
             if options and options.get("splitextension"):
-                file_dict["file"] = fname
+                file_dict["name"] = fname
 
             if options and options.get("splitfolders"):
                 file_dict["folders"] = dirpath.split(os.sep) #split_folder(dirpath)
@@ -285,19 +295,15 @@ def scan_files(uri: str, options: dict = None) -> dict:
                 continue
 
             if options and options.get("stats"):
-                time_format = "%Y-%m-%d %H:%M:%S"
                 file_stats = os.stat(uri)
-                file_dict["accessed"] = time.strftime(time_format,
-                        time.localtime(file_stats.st_atime))
-                file_dict["modified"] = time.strftime(time_format,
-                        time.localtime(file_stats.st_mtime))
-                file_dict["created"] = time.strftime(time_format,
-                        time.localtime(file_stats.st_ctime))
+                file_dict["accessed"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_atime))) #
+                file_dict["modified"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_mtime)))
+                file_dict["created"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_ctime)))
                 file_dict["size"] = file_stats.st_size
                 file_dict["mode"] = file_stats.st_mode
 
             if options and options.get("profile"):
-                p_obj = PhraseTool(in_phrase=file_dict.get("file",""))
+                p_obj = PhraseTool(in_phrase=file_dict.get("name",""))
                 file_dict["profile"] = p_obj.get_metadata()
 
             # handel the options for hash

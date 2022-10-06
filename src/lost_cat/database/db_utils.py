@@ -1,10 +1,8 @@
 """A module to wrap the database functions and allow the syst4em to wru"""
 import logging
-import sqlite3
 
-from lost_cat.database.schema import SourceMaps, SourceUris, SubPaths, SourceValues, LCItems ,LCItemVersions, NameProfiles, NameProfileParts, mapper_registry
-from sqlalchemy import create_engine, MetaData, select
-from sqlalchemy.exc import IntegrityError
+from lost_cat.database.schema import mapper_registry
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, session
 
 logger = logging.getLogger(__name__)

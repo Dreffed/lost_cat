@@ -1,6 +1,4 @@
 """A test case for the phrase tool module"""
-import os
-import string
 import sys
 import unittest
 import logging

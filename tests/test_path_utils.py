@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 # def is_include(file_dict: dict, options: dict = None) -> bool:
 # def scan_zip(uri: str) -> dict:
 # def scan_tar(uri: str) -> dict:
-class TestBuildPath(unittest.TestCase):
+class TestUtilsBuildPath(unittest.TestCase):
     """A container class for the build path modeule test cases"""
 
     def test_build_path(self):
         """test the build path function and see it returns"""
         uri = os.path.join(os.getcwd(), *['tests', 'data'])
-        print(uri)
+        logger.debug("URI: %s", uri)
 
         result = build_path(uri=uri)
 

@@ -1,198 +1,112 @@
-from __future__ import annotations
-import logging
 
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List
+from sqlalchemy import Column, ForeignKey, func
+from sqlalchemy import Integer, String, DateTime, Boolean
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship, backref
 
-from sqlalchemy import Column, Integer, String, DateTime, exists
-from sqlalchemy.orm import registry, relationship, column_property
-from sqlalchemy.schema import PrimaryKeyConstraint, UniqueConstraint, ForeignKey
+Base = declarative_base()
 
-logger = logging.getLogger(__name__)
+class Processors(Base):
+    __tablename__ = "processors"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30))
+    uri = Column(String(), unique = True)
+    rel_path = Column(String(), unique = True)
 
-mapper_registry = registry()
+    # joins
+    #uris = relationship("URIs", secondary= "processoruris") #back_populates = "processor")
+    pmd = relationship("ProcessorMD")
 
-@mapper_registry.mapped
-@dataclass
-class EntityTypes:
-    """Tracks the versions of the found items"""
-    __tablename__ = "entitytypes"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("et_type", "et_ext", name="et_unc"), )
+    def __repr__(self):
+        return f"Processor(id={self.id!r}, name={self.name!r})"
 
-    et_id:            int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    et_type:           str = field(default=None, metadata={"sa": Column(String(10))})
-    et_ext:            str = field(default=None, metadata={"sa": Column(String(10))})
-    et_descr:          str = field(default=None, metadata={"sa": Column(String(1024))})
-    et_config:         str = field(default=None, metadata={"sa": Column(String(4048))})
+class ProcessorMD(Base):
+    __tablename__ = "processormd"
+    processorid = Column(Integer, ForeignKey("processors.id"), primary_key = True)
+    key = Column(String(255), primary_key = True)
+    added = Column(DateTime, default = func.now())
+    value = Column(String())
 
-@mapper_registry.mapped
-@dataclass
-class LCItemMetadata:
-    """Tracks the versions of the found items"""
-    __tablename__ = "itemmetadata"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("iv_id", "imd_key", name="imd_unc"), )
+    def __repr__(self):
+        return f"Processor MD(id={self.id!r}, key={self.key!r}, value={self.value!r})"
 
-    imd_id:            int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    iv_id:             int = field(
-            init=False, metadata={"sa": Column(ForeignKey("itemversions.iv_id"))}
-        )
-    imd_key:           str = field(default=None, metadata={"sa": Column(String(255))})
-    imd_type:          str = field(default=None, metadata={"sa": Column(String(10))})
-    imd_value:         str = field(default=None, metadata={"sa": Column(String(4048))})
+class Domains(Base):
+    __tablename__ = "domains"
+    id = Column(Integer, primary_key=True)
+    domain = Column(String(), unique = True)
+    domain_type = Column(String(15))
 
-@mapper_registry.mapped
-@dataclass
-class LCItemVersions:
-    """Tracks the versions of the found items"""
-    __tablename__ = "itemversions"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("lci_id", "iv_modified", name="lciv_unc"), )
+    # joins
+    domains = relationship("URIs")
 
-    iv_id:             int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    lci_id:            int = field(
-            init=False, metadata={"sa": Column(ForeignKey("items.lci_id"))}
-        )
+    def __repr__(self):
+        return f"Domain(id={self.id!r}, name={self.domain!r})"
 
-    iv_size:       str = field(default=None, metadata={"sa": Column(Integer)})
-    iv_created:    datetime = field(default=None, metadata={"sa": Column(DateTime)})
-    iv_modified:   datetime = field(default=None, metadata={"sa": Column(DateTime)})
+class URIs(Base):
+    __tablename__ = "uris"
+    id = Column(Integer, primary_key=True)
+    uri = Column(String(), unique = True)
+    uri_type = Column(String(15))
+    domainid = Column(Integer, ForeignKey("domains.id"))
+    root = Column(Boolean, default = False)
+    added = Column(DateTime, default = func.now())
+    deleted = Column(DateTime)
 
-    lci_metadata:   List[LCItemMetadata] = field(default_factory=list,
-            metadata={"sa": relationship("LCItemMetadata", backref="itemversions")})
+    # joins
+    #processors = relationship("Processors", secondary= "processoruris") # back_populates = "uri")
+    umd = relationship("URIMD")
+    versions = relationship("Versions")
 
-@mapper_registry.mapped
-@dataclass
-class LCItems:
-    """The objects found in the underlying paths"""
-    __tablename__ = "items"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("lci_uri"), )
+    def __repr__(self):
+        return f"URI(id={self.id!r}, name={self.uri!r})"
 
-    lci_id:             int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    sp_id:          int = field(
-            init=False, metadata={"sa": Column(ForeignKey("subpaths.sp_id"))}
-        )
+class URIMD(Base):
+    __tablename__ = "urimd"
+    uriid = Column(Integer, ForeignKey("uris.id"), primary_key = True)
+    key = Column(String(255), primary_key = True)
+    added = Column(DateTime, default = func.now())
+    modified = Column(DateTime)
+    deleted = Column(DateTime)
+    value = Column(String())
 
-    lci_uri:        str = field(default=None, metadata={"sa": Column(String(4048))})
-        # full path to item
-    lci_type:       str  = field(default=None, metadata={"sa": Column(String(10))})
-        # File | Stream | BLOB etc.
-    lci_name:       str = field(default=None, metadata={"sa": Column(String(255))})
-    lci_ext:        str = field(default=None, metadata={"sa": Column(String(10))})
+    def __repr__(self):
+        return f"URI MD(uriid={self.uriid!r}, key={self.key!r}, value={self.value!r})"
 
-    lci_versions:   List[LCItemVersions] = field(default_factory=list,
-            metadata={"sa": relationship("LCItemVersions", backref="items")})
+class ProcessorURIs(Base):
+    __tablename__ = "processoruris"
+    #id = Column(Integer, primary_key=True)
+    processorid = Column(Integer, ForeignKey("processors.id"), primary_key = True)
+    uriid = Column(Integer, ForeignKey("uris.id"), primary_key = True)
+    added = Column(DateTime, default = func.now())
 
-@mapper_registry.mapped
-@dataclass
-class SubPaths:
-    """The subpaths (folders) encouvtered in the scan"""
-    __tablename__ = "subpaths"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("sp_uri", name="sp_unc"), )
+    # joins
+    uri = relationship("URIs", backref = backref("processors_assoc"))
+    processor = relationship("Processors", backref = backref("uris_assoc"))
 
-    sp_id:          int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    s_id:           int = field(
-            init=False, metadata={"sa": Column(ForeignKey("sourceuris.s_id"))}
-        )
+class Versions(Base):
+    __tablename__ = "versions"
+    id = Column(Integer, primary_key=True)
+    uriid = Column(Integer, ForeignKey("uris.id"))
+    added = Column(DateTime, default = func.now())
+    modified = Column(DateTime)
+    size = Column(Integer)
+    checksum = Column(String(255))
 
-    sp_uri:         str = field(default=None, metadata={"sa": Column(String(4048))})
+    # join
+    vmd = relationship("VersionMD")
 
-    sp_items:       List[LCItems] = field(default_factory=list,
-            metadata={"sa": relationship("LCItems", backref="subpaths")})
+    def __repr__(self):
+        return f"URI(versionid={self.id!r}, uriid={self.uriid!r}, size={self.size}, modified={self.modified})"
 
-@mapper_registry.mapped
-@dataclass
-class SourceValues:
-    """A Key Value form of table to assign values to the Source system"""
-    __tablename__ = "sourcevalues"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("sv_type", "sv_label", name="sv_unc"), )
+class VersionMD(Base):
+    __tablename__ = "versionmd"
+    id = Column(Integer, primary_key=True)
+    versionid = Column(Integer, ForeignKey("versions.id"))
+    added = Column(DateTime, default = func.now())
+    modified = Column(DateTime)
+    deleted = Column(DateTime)
+    key = Column(String(255))
+    value = Column(String())
 
-    sv_id:          int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-
-    sv_type:        str = field(default=None, metadata={"sa": Column(String(10))})
-        # ENV | STRING | CONFIG | etc.
-    sv_label:       str = field(default=None, metadata={"sa": Column(String(255))})
-    sv_value:       str = field(default=None, metadata={"sa": Column(String(255))})
-    sv_uri:         str = field(default=None, metadata={"sa": Column(String(255))})
-
-@mapper_registry.mapped
-@dataclass
-class SourceUris:
-    """Tracks the sources in the system"""
-    __tablename__ = "sourceuris"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("s_uri", name="s_unc"), )
-
-    s_id:          int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    s_type:         str = field(default=None, metadata={"sa": Column(String(10))})
-        # FileSystem | SQL| HTTP | FTP | SAP | LiveLink | DMS etc.
-    s_uri:          str = field(default=None, metadata={"sa": Column(String(4048))})
-    s_auth:         str = field(default=None, metadata={"sa": Column(String(10))})
-        # None | Token | User:Pass | OAuth
-    sa_paths:       list[SubPaths] = field(default_factory=list,
-            metadata={"sa": relationship("SubPaths", backref="sourceuris")})
-
-@mapper_registry.mapped
-@dataclass
-class SourceMaps:
-    """The brige table for uris to values"""
-    __tablename__ = "sourcemaps"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (PrimaryKeyConstraint("sv_id", "s_id", name="sm_ids"), )
-
-    sv_id:          int = field(default=None, metadata={"sa": Column(Integer)})
-    s_id:           int = field(default=None, metadata={"sa": Column(Integer)})
-
-@mapper_registry.mapped
-@dataclass
-class NameProfileParts:
-    """The parts of the profile found..."""
-    __tablename__ = "nameprofileparts"
-    __sa_dataclass_metadata_key__ = "sa"
-
-    prp_id:         int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    pr_id:           int = field(
-            init=False, metadata={"sa": Column(ForeignKey("nameprofiles.pr_id"))}
-        )
-
-    prp_value:      str = field(default=None, metadata={"sa": Column(String(255))})
-    prp_start:      int = field(default=None, metadata={"sa": Column(Integer)})
-    prp_end:        int = field(default=None, metadata={"sa": Column(Integer)})
-
-@mapper_registry.mapped
-@dataclass
-class NameProfiles:
-    """Stored the breakdown of the names discovered"""
-    __tablename__ = "nameprofiles"
-    __sa_dataclass_metadata_key__ = "sa"
-    __table_args__ = (UniqueConstraint("pr_phrase", name="pr_unc"), )
-
-    pr_id:          int = field(
-            init=False, metadata={"sa": Column(Integer, primary_key=True)}
-        )
-    pr_phrase:      str = field(default=None, metadata={"sa": Column(String(4048))})
-    pr_short:       str = field(default=None, metadata={"sa": Column(String(50))})
-    pr_normal:      str = field(default=None, metadata={"sa": Column(String(255))})
-    pr_parts:       list[NameProfileParts] = field(default_factory=list,
-            metadata={"sa": relationship("NameProfileParts", backref="nameprofiles")})
+    def __repr__(self):
+        return f"Version MD(uriid={self.versionid!r}, key={self.key!r}, value={self.value!r})"

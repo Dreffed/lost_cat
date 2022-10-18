@@ -7,10 +7,10 @@ from datetime import datetime
 import hashlib
 import io
 import logging
+import os
 import platform
 import psutil
 import re
-import os
 import tarfile
 import time
 from time import mktime

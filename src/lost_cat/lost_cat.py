@@ -7,15 +7,16 @@ import shelve
 import time
 
 from datetime import datetime
+from queue import Empty
+from sqlite3 import IntegrityError
+from sqlalchemy import func
+
 from lost_cat.database.db_utils import DBEngine
 from lost_cat.database.schema import URIMD, Domains, DomainMD, ProcessorMD, \
                 ProcessorURIs, Processors, URIs, VersionMD, Versions
 from lost_cat.utils.module_utils import load_module, load_modulefile
 from lost_cat.utils.path_utils import SourceNotValid
 from lost_cat.utils.tag_anon import TagAnon
-from queue import Empty
-from sqlite3 import IntegrityError
-from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 

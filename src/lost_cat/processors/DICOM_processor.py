@@ -4,11 +4,11 @@ import logging
 import os
 import threading as td
 import zipfile
+from queue import Empty
 
 from lost_cat.parsers.dicom_parser import DICOMParser
 from lost_cat.processors.base_processor import BaseProcessor
 from lost_cat.utils.tag_anon import TagAnon
-from queue import Empty
 
 logger = logging.getLogger(__name__)
 
@@ -180,55 +180,59 @@ class DICOMProcessor(BaseProcessor):
         self.input.put(self.semiphore)
 
         while self.input:
-            q_item = self.input.get(timeout=t_settings.get("timeout")) if self.input else None
-            if q_item == self.semiphore:
-                break
+            try:
+                q_item = self.input.get(timeout=t_settings.get("timeout")) if self.input else None
+                if q_item == self.semiphore:
+                    break
 
-            # if the user wants to kill the queue if there are not entries...
-            # requires timeout set, otherwise the queue get blocks...
-            if not q_item and self.settings.get("threads",{}).get("stop"):
-                break
+                # if the user wants to kill the queue if there are not entries...
+                # requires timeout set, otherwise the queue get blocks...
+                if not q_item and self.settings.get("threads",{}).get("stop"):
+                    break
 
-            _uri=q_item.get("uri")
-            if not os.path.exists(_uri):
-                # most likely a zipfile...
-                zf = zipfile.ZipFile(q_item.get("zipfile"))
-                dcm_data = zf.read(q_item.get("uri"))
-                bytes_io = io.BytesIO(dcm_data)
+                _uri=q_item.get("uri")
+                if not os.path.exists(_uri):
+                    # most likely a zipfile...
+                    zf = zipfile.ZipFile(q_item.get("zipfile"))
+                    dcm_data = zf.read(q_item.get("uri"))
+                    bytes_io = io.BytesIO(dcm_data)
 
-                _dcmobj = DICOMParser(bytes_io=bytes_io)
-            else:
-                _dcmobj = DICOMParser(uri=_uri)
+                    _dcmobj = DICOMParser(bytes_io=bytes_io)
+                else:
+                    _dcmobj = DICOMParser(uri=_uri)
 
-            # load the
-            _dcmobj.set_anonimizer(anonimizer=self._anon)
-            _dcmobj.set_group_tags(tags=self._grp_tags)
-            _dcmobj.set_metadata_tags(tags=self._md_tags)
-            _dcmmd = _dcmobj.parser()
-            _dcmobj.close()
+                # load the
+                _dcmobj.set_anonimizer(anonimizer=self._anon)
+                _dcmobj.set_group_tags(tags=self._grp_tags)
+                _dcmobj.set_metadata_tags(tags=self._md_tags)
+                _dcmmd = _dcmobj.parser()
+                _dcmobj.close()
 
-            # process the tags and return...
-            _md = {}
-            for _mdk, _mdv in _dcmmd.get("grouping",{}).items():
-                _md[_mdk] = _mdv if _mdv  else "<missing>"
+                # process the tags and return...
+                _md = {}
+                for _mdk, _mdv in _dcmmd.get("grouping",{}).items():
+                    _md[_mdk] = _mdv if _mdv  else "<missing>"
 
-            _vmd = {}
-            for _vmdk, _vmdv in _dcmmd.get("metadata",{}).items():
-                _vmd[_vmdk] = _vmdv
+                _vmd = {}
+                for _vmdk, _vmdv in _dcmmd.get("metadata",{}).items():
+                    _vmd[_vmdk] = _vmdv
 
-            _data = {
-                "processorid": self.processorid,
-                "uri id": q_item.get("uriid"),
-                "uri_type": q_item.get("uri_type"),
-                "uri": q_item.get("uri"),
-                "metadata": _md,
-                "versions": {
-                    "__latest__": True,
-                    "versionmd" : _vmd
+                _data = {
+                    "processorid": self.processorid,
+                    "uri id": q_item.get("uriid"),
+                    "uri_type": q_item.get("uri_type"),
+                    "uri": q_item.get("uri"),
+                    "metadata": _md,
+                    "versions": {
+                        "__latest__": True,
+                        "versionmd" : _vmd
+                    }
                 }
-            }
-            logger.debug("O Data: %s", _data)
-            self.output.put(_data)
+                logger.debug("O Data: %s", _data)
+                self.output.put(_data)
+
+            except Empty:
+                break
 
     def collection(self) -> None:
         """will run the queue and will build out a structure of group items

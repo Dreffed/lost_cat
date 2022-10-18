@@ -4,7 +4,6 @@ file scanning and zip file handling.
 copyright adscens.io 2022 / thoughtswin systems 2022
 """
 from datetime import datetime
-from genericpath import isfile
 import hashlib
 import io
 import logging
@@ -27,13 +26,7 @@ from socket import gethostname, gethostbyname
 from urllib.parse import urlparse
 from validators import url as val_url
 
-try:
-    from lost_cat.utils.phrase_utils import PhraseTool
-except ImportError:
-    import sys
-    from os import path
-    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-    from utils.phrase_utils import PhraseTool
+from lost_cat.utils.phrase_utils import PhraseTool
 
 logger = logging.getLogger(__name__)
 

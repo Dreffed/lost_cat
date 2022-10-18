@@ -950,7 +950,6 @@ class LostCat():
 
         logger.info(_vmd_keys)
 
-
     def catalog_artifacts(self) -> dict:
         """Will scan the sources and load a dictionary with the found files,
         it'll use the template list for extensions to use.
@@ -1024,19 +1023,18 @@ class LostCat():
                 continue
 
             _settings = obj.avail_config()
-            """
-            <TODO: change the query set up to a dict of wueries include field lists
-            Filters
-               <function>
-                   <tables>
-                            table alias join criteria
-                    fields  table
-                                field: alias
-                    Pivot   table
-                                field alias
-                    filter  table
-                                field value | [values]
-            """
+
+            #<TODO: change the query set up to a dict of wueries include field lists
+            #Filters
+            #   <function>
+            #       <tables>
+            #                table alias join criteria
+            #        fields  table
+            #                    field: alias
+            #        Pivot   table
+            #                    field alias
+            #        filter  table
+            #                    field value | [values]
             _queries = self.get_sourcequery(filters=_settings.get("source",[]),
                         urimd=_settings.get("uri_metadata",[]),
                         versionmd=_settings.get("version_metadata",[]))

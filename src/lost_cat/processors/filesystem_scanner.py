@@ -5,11 +5,12 @@ import os
 import re
 import threading as td
 
-from lost_cat.utils.path_utils import SourceDoesNotExist, get_filename, get_file_metadata
-from lost_cat.processors.base_processor import BaseProcessor
-from lost_cat.utils.path_utils import scan_files, SourceNotHandled
 from queue import Empty
 from socket import gethostname
+
+from lost_cat.utils.path_utils import SourceDoesNotExist, get_filename, get_file_metadata
+from lost_cat.processors.base_processor import BaseProcessor
+from lost_cat.utils.path_utils import scan_files, SourceNotHandled, get_machine
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,8 @@ class FileScanner(BaseProcessor):
                 if isinstance(q_item, dict):
                     uri = q_item.get("uri")
 
+                domainmd = get_machine()
+
                 for fs_obj in scan_files(uri=uri, options=self.settings.get("options",{})):
                     # convert to the
                     # URIs
@@ -173,10 +176,11 @@ class FileScanner(BaseProcessor):
                     # {
                     #   'type': | 'root': | 'folder': | 'name': | 'ext': |
                     #   'folders': | 'accessed': | 'modified': | 'created': | 'size': | 'mode':
+                                            # add domain md to first record
+
                     _uri = get_filename(fs_obj)
                     _data = {
                         "domain": _hostname,
-
                         "processorid": self.processorid,
                         "uriid": q_item.get("uriid"),
                         "uri_type": fs_obj.get("type"),
@@ -192,6 +196,10 @@ class FileScanner(BaseProcessor):
                             "checksum": fs_obj.get("hash", {}).get("SHA1"),
                         }
                     }
+                    if domainmd:
+                        _data["domainmd"] = domainmd
+                        domainmd = None
+
                     self.output.put(_data)
 
                     for zs_obj in fs_obj.get("files", []):
@@ -225,106 +233,3 @@ class FileScanner(BaseProcessor):
 
             except Empty:
                 break
-
-if __name__ == "__main__":
-    import sys
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-    out_queue = mp.Queue()
-    _settings = {
-        "threads": {
-            "count": 3,
-            "stop": True, # tells the system to stop when the in queue is empty
-            "timeout": 2
-        }
-    }
-
-    in_queue = mp.Queue()
-
-    # quick function to add the detault drives and user drives...
-    _settings["filescanner"] = FileScanner.avail_config()
-    _settings["filescanner"]["builder"] = {
-                "drives": ["C", "D", "E"],
-                "base": ["users", os.getlogin()],
-                "folders": ["Downloads"],
-                #['Documents', 'Downloads', 'Dropbox', 'OneDrive', 'Pictures', 'Music', 'Videos'],
-            }
-
-    builder = _settings.get("filescanner", {}).get("builder", {})
-    base_path = builder.get("base", [])
-
-    logger.debug("Builder: %s", builder)
-    logger.debug("Drives: %s", builder.get("drives", ["C"]))
-    logger.debug("Base: %s", base_path)
-    logger.debug("Folders: %s", builder.get("folders", ["Downloads"]))
-
-    for fs_drive in builder.get("drives", ["C"]):
-        for folder_name in builder.get("folders", ["Downloads"]):
-            folder_path = base_path + [folder_name]
-
-            fs_path = os.path.join(f"{fs_drive}:\\", *folder_path)
-            logger.debug("Try: %s", fs_path)
-            if os.path.exists(fs_path):
-                logger.info("Adding: %s", fs_path)
-                in_queue.put(fs_path)
-
-
-    logger.debug("Settings: %s", _settings)
-    obj = FileScanner(settings=_settings)
-
-    obj.in_queue(in_queue=in_queue)
-    obj.out_queue(out_queue=out_queue)
-
-    # add the semiphore to the queue, can also use a timeout option...
-    for i in range(_settings.get("threads",{}).get("count",5)):
-        in_queue.put(obj.semiphore)
-
-    obj.scan()
-    cls_name = obj.semiphore
-
-    obj.close()
-    out_queue.put("DONE")
-
-    exts = {}
-    in_zip = []
-
-    while out_queue:
-        try:
-            # set a timeout, and handle the semiphore case too
-            o_item = out_queue.get(timeout=_settings.get("threads",{}).get("timeout")) if out_queue else None
-            if o_item == "DONE":
-                break
-
-            # if the user wants to kill the queue if there are not entries...
-            # requires timeout set, otherwise the queue get blocks...
-            if not o_item and _settings.get("threads",{}).get("stop"):
-                break
-
-            ext = o_item.get("ext", "<missing>")
-            if ext not in exts:
-                exts[ext] = {
-                    "size": 0,
-                    "count": 0,
-                    "files": []
-                }
-            exts[ext]["size"] += o_item.get("size",0)
-            exts[ext]["count"] += 1
-            exts[ext]["files"].append(o_item)
-
-            if "zipfile" in o_item:
-                in_zip.append(o_item)
-
-            #logger.info(o_item)
-        except Empty:
-            break
-
-    for ext, values in exts.items():
-        logger.info("\t%s:\t%s,\t%s", ext, values.get("count", 0), values.get("size", 0))
-
-    for fs_item in exts.get(".zip", {}).get("files", []):
-        descr_str = "\n\tFile:\t{name}{ext}\n\t\t{folder}\n\t\t{modified}:{size}".format(**fs_item)
-        logger.info(descr_str)
-        for zf in fs_item.get("files",[]):
-            descr_str = "ZIPFILES:\n\tFile:\t{name}{ext}\n\t\t{folder}\n\t\t{size}".format(**zf)
-
-    logger.info("Zipped: %s", len(in_zip))

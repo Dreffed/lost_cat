@@ -782,6 +782,22 @@ class LostCat():
 
                 _uriid = _uri.id
 
+                # add the relationship to the processor id if included...
+                if _processorid := o_item.get("processorid"):
+                    if not (_procuri := _db_sess.query(ProcessorURIs).filter(
+                                    ProcessorURIs.uriid == _uriid,
+                                    ProcessorURIs.processorid == _processorid
+                            ).one_or_none()):
+                        _procuri = ProcessorURIs(
+                                processorid = _processorid,
+                                uriid = _uriid,
+                                added = datetime.now()
+                        )
+                        _db_sess.add(_procuri)
+                        _db_sess.flush()
+
+                        _stats["added"] += 1
+
                 # get the uri metadata
                 _urimds = _db_sess.query(URIMD).filter(URIMD.uriid == _uriid).all()
                 _urimd_keys = {}

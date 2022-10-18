@@ -37,10 +37,21 @@ class Domains(Base):
     domain_type = Column(String(15))
 
     # joins
+    dmd = relationship("DomainMD")
     domains = relationship("URIs")
 
     def __repr__(self):
         return f"Domain(id={self.id!r}, name={self.domain!r})"
+
+class DomainMD(Base):
+    __tablename__ = "domains"
+    domainid = Column(Integer, ForeignKey("domains.id"), primary_key = True)
+    key = Column(String(255), primary_key = True)
+    added = Column(DateTime, default = func.now())
+    value = Column(String())
+
+    def __repr__(self):
+        return f"Domain MD(id={self.id!r}, key={self.key!r}, value={self.value!r})"
 
 class URIs(Base):
     __tablename__ = "uris"

@@ -13,7 +13,8 @@ from zlib import compressobj
 from sqlalchemy import func
 
 from database.db_utils import DBEngine
-from database.schema import URIMD, Domains, ProcessorMD, ProcessorURIs, Processors, URIs, VersionMD, Versions
+from database.schema import URIMD, Domains, DomainMD, ProcessorMD, \
+                ProcessorURIs, Processors, URIs, VersionMD, Versions
 from queue import Empty
 import threading as td
 from utils.module_utils import load_module, load_modulefile
@@ -713,6 +714,49 @@ class LostCat():
                     )
                     _db_sess.add(_domain)
                     _db_sess.flush()
+
+                _domainid = _domain.id
+
+                # domain metadata...
+                _domainmds = _db_sess.query(DomainMD).filter(DomainMD.domainid == _domainid).all()
+                _domainmd_keys = {}
+                for _domainmd in _domainmds:
+                    _domainmd_keys[_domainmd.key] = _domainmd.value
+
+                # update the metadata or add if mssing
+                _mdadd = []
+                for _mdk, _mdv in o_item.get("domainmd",{}).items():
+                    _mdval = _domainmd_keys.get(_mdk)
+                    if _mdval:
+                        if not _mdv:
+                            continue
+
+                        if not _mdval or _mdv != _mdval:
+                            # perform an update...
+                            _db_sess.query(DomainMD) \
+                                    .filter_by(domainid=_domainid, key=_mdk) \
+                                    .update({
+                                        "value": _mdv if _mdv else "<missing>",
+                                        "modified": datetime.now()
+                                    })
+
+                            _stats["updates"] += 1
+                    else:
+                        # insert new value
+                        if not _mdv:
+                            continue
+
+                        _mdrec = DomainMD(
+                            domainid = _domainid,
+                            key = _mdk if _mdk else "<missing>",
+                            value = _mdv,
+                            modified = datetime.now()
+                        )
+                        _mdadd.append(_mdrec)
+                        _stats["added"] += 1
+
+                _db_sess.add_all(_mdadd)
+                _db_sess.flush()
 
                 # get the uri
                 # handle zip files as well

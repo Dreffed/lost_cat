@@ -5,21 +5,9 @@ import logging
 import os
 import sys
 
-try:
-    from parsers.base_parser import BaseParser
-except:
-    currentdir = os.path.dirname(os.path.abspath(os.getcwd()))
-    if not currentdir in sys.path:
-        sys.path.insert(0, currentdir)
-    from .base_parser import BaseParser
-
-try:
+from lost_cat.base_parser import BaseParser
     from utils.path_utils import func_switch_zip, get_file_metadata
-except:
-    currentdir = os.path.dirname(os.path.abspath(os.getcwd()))
-    if not currentdir in sys.path:
-        sys.path.insert(0, currentdir)
-    from .utils.path_utils import func_switch_zip, get_file_metadata
+
 
 logger = logging.getLogger(__name__)
 

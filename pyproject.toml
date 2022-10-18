@@ -7,14 +7,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lost_cat"
-version = "0.0.3"
+version = "0.1.0"
 authors = [
   { name="Dreffed aka David Gloyn-Cox", email="dreffed@gmail.com" },
 ]
 description = "Lost cat is a package to scan a variety of locations and report back the files, metadata, and summary contents as needed."
 readme = "README.md"
 license = { file="LICENSE" }
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

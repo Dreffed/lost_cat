@@ -266,13 +266,3 @@ class DICOMProcessor(BaseProcessor):
             # requires timeout set, otherwise the queue get blocks...
             if not q_item and self.settings.get("threads",{}).get("stop"):
                 break
-
-
-    def consolidate(self) -> None:
-        """This will process the items in the queue which are grouped items
-            [group]
-                [...group]
-                    [uris]
-                    [metadata]
-        """
-        pass

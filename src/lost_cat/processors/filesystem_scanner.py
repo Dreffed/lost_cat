@@ -3,28 +3,13 @@ import logging
 import multiprocessing as mp
 import os
 import re
-from socket import gethostname
 import threading as td
 
-from utils.path_utils import SourceDoesNotExist, build_path, get_filename, get_file_metadata
-
-try:
-    from processors.base_processor import BaseProcessor
-except ImportError:
-    import sys
-    from os import path
-    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-    from base_processor import BaseProcessor
-
-try:
-    from utils.path_utils import scan_files, SourceNotHandled
-except ImportError:
-    import sys
-    from os import path
-    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-    from utils.path_utils import scan_files, SourceNotHandled
-
+from lost_cat.utils.path_utils import SourceDoesNotExist, get_filename, get_file_metadata
+from lost_cat.processors.base_processor import BaseProcessor
+from lost_cat.utils.path_utils import scan_files, SourceNotHandled
 from queue import Empty
+from socket import gethostname
 
 logger = logging.getLogger(__name__)
 

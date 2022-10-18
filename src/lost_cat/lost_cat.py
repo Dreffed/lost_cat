@@ -1,26 +1,21 @@
 """
 Lost cat will scan and process a range of files
 """
-from asyncio import queues
-from dataclasses import field
-from datetime import datetime
 import logging
 import multiprocessing as mp
 import shelve
-from sqlite3 import IntegrityError
 import time
-from zlib import compressobj
-from sqlalchemy import func
 
-from database.db_utils import DBEngine
-from database.schema import URIMD, Domains, DomainMD, ProcessorMD, \
+from datetime import datetime
+from lost_cat.database.db_utils import DBEngine
+from lost_cat.database.schema import URIMD, Domains, DomainMD, ProcessorMD, \
                 ProcessorURIs, Processors, URIs, VersionMD, Versions
+from lost_cat.utils.module_utils import load_module, load_modulefile
+from lost_cat.utils.path_utils import SourceNotValid
+from lost_cat.utils.tag_anon import TagAnon
 from queue import Empty
-import threading as td
-from utils.module_utils import load_module, load_modulefile
-from utils.path_utils import SourceNotValid
-
-from utils.tag_anon import TagAnon
+from sqlite3 import IntegrityError
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +23,10 @@ logger = logging.getLogger(__name__)
 class FeatureNotImplemented(Exception):
     """used for the feature not implemented"""
     def __init__(self, label: str, feature: str, message: str) -> None:
+        super().__init__()
         self.label = label
         self.feature = feature
         self.message = message
-        super().__init__()
 
 class ProcessorCannotbeLoaded(Exception):
     """A simple exception to raise already exist error"""
@@ -48,22 +43,24 @@ class ProcessorAlreadyExists(Exception):
 class NoHandlersFoundForType(Exception):
     """A simple exception to raise already exist error"""
     def __init__(self, label: str, message: str) -> None:
+        super().__init__()
         self.label = label
         self.message = message
 
 class ClassFailedToLoad(Exception):
     """A simple exception to raise already exist error"""
     def __init__(self, label: str, message: str) -> None:
+        super().__init__()
         self.label = label
         self.message = message
 
 class ParserFailedToLoad(Exception):
     """A simple exception to raise already exist error"""
     def __init__(self, label: str, base_class: str, message: str) -> None:
+        super().__init__()
         self.label = label
         self.base_class = base_class
         self.message = message
-        super().__init__()
 
 class LostCat():
     """
@@ -239,52 +236,6 @@ class LostCat():
 
         logger.info(self._processors)
 
-    def load_caches(self):
-        """loads the uri, version cache tables"""
-        _db_sess = self._db.session()
-
-        # Domains
-        # K: domain          | V: id
-        for row in _db_sess.query(Domains):
-            self._domains[row.domain] = row.id
-
-        # URIs
-        # K: uri             | V: id
-        for row in _db_sess.query(URIs):
-            self._uris[row.uri] = row.id
-
-        # URIMD
-        # K: uriid, key      | V: value
-        for row in _db_sess.query(URIMD):
-            self._urimd[f"{row.uriid}.{row.key}"] = row.value
-
-        # Versions
-        # K: uriid, modified | V: row
-        for row in _db_sess.query(Versions):
-            self._versions[f"{row.uriid}.{row.modified}"] = {
-                "modified": row.modified,
-                "checksum": row.checksum,
-                "size": row.size
-            }
-
-        # Vlatest
-        # K: uriid           | V: row
-        _sql = """SELECT
-                v.uriid AS uriid,
-                v.id AS versionid,
-                MAX(v.modified) AS modified
-            FROM versions v
-            GROUP BY
-                v.uriid, v.id
-        """
-        for row in self._db.sql(sql=_sql):#_db_sess.query(Versions):
-            self._vlatest["{uriid}".format(**row)] = row
-
-        # Version Metadata
-        # K: versionid, key  | V: id, value
-        for row in _db_sess.query(VersionMD):
-            self._versionmd[f"{row.versionid}.{row.key}"] = {"id": row.id, "value": row.value}
-
     def add_processor(self, label: str = None,
             base_class: object = None,
             module_path: str = None,
@@ -367,6 +318,7 @@ class LostCat():
                         rel_path: str = None,
                         settings: dict = None,
                         overwrite: bool = False):
+        """ """
 
         _cls_name = module_path.split('.')[-1] if module_path else None
         logger.info("Name: %s", _cls_name)
@@ -376,10 +328,10 @@ class LostCat():
                 logger.info("Loading path: %s", module_path)
                 obj = None
                 if rel_path:
-                    _objs = load_modulefile(module=module_path)
+                    _objs = load_modulefile(folder=module_path, file=rel_path)
 
                 else:
-                    _objs = load_module(module=module_path)
+                    _objs = load_module(module = module_path)
 
                 logger.info("OBJS: %s", _objs)
                 for _o, _v in _objs.items():
@@ -603,7 +555,7 @@ class LostCat():
                 )
 
         if not _uri_obj:
-            raise SourceNotValid()
+            raise SourceNotValid(uri=uri, message="missing processor record!")
 
         logger.debug("Processor: %s", _uri_obj)
         _uritype = _uri_obj.get("type","<>")

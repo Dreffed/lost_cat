@@ -27,18 +27,21 @@ class BaseProcessor():
 
     @property
     def name(self):
+        """ """
         return self._name
 
     @property
     def version(self):
+        """ """
         return self._version
 
     @property
     def semiphore(self):
+        """ """
         return self._semiphore
 
     def in_queue(self, in_queue: mp.Queue):
-        """"""
+        """ """
         self.input = in_queue
 
     def out_queue(self, out_queue: mp.Queue):
@@ -108,7 +111,7 @@ class BaseProcessor():
         }
 
     @staticmethod
-    def avail_config(self) -> dict:
+    def avail_config() -> dict:
         """returns configuration details about the class
             "options":          dict    specific to the called class
             "uritypes":         array   uri_types to filter sources

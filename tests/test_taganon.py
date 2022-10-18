@@ -28,12 +28,28 @@ class TestUtilsTagAnon(unittest.TestCase):
         }
 
         obj =TagAnon(tags=tags_anon)
-
+        data = {}
+        results = []
         for idx in range(1, 50):
             tag = random.choice(list(tags_anon.keys()))
             value = random.choice(test_tags.get(tag,[]))
             res = obj.get_anon(tag=tag, value=value)
+            row = {
+                "idx": idx,
+                "tag": tag,
+                "value": value,
+                "new": res,
+            }
+            results.append(row)
             print("{:20}|\t{:>15}\t{:>15}".format(tag, value, res))
+
+            if tag not in data:
+                data[tag] = {}
+
+            if saved := data.get(tag, {}).get(value):
+                assert saved == res
+            else:
+                data[tag][value] = res
 
         obj = None
 

@@ -1,11 +1,10 @@
 """A test case for the phrase tool module"""
+import logging
 import sys
 import unittest
-import logging
 
 from lost_cat.utils.phrase_utils import PhraseTool
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # class PhraseTool:
@@ -44,7 +43,7 @@ class TestPhraseTool(unittest.TestCase):
         self.assertEqual(pr_len, 10)
         self.assertEqual(result.get("parts",[])[0].get("value"), "Protection", "First Word is not discovered")
 
+
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     unittest.main()
-
-

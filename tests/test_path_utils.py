@@ -1,19 +1,12 @@
 """A test case for the path utils module"""
-import os
-import unittest
 import logging
-from lost_cat.utils.path_utils import build_path
+import os
+import sys
+import unittest
+from lost_cat.utils.path_utils import get_machine, build_path, split_folder
 
 logger = logging.getLogger(__name__)
 
-# def build_path(uri: str) -> dict:
-# def get_filename(file_dict: dict) -> str:
-# def get_file_metadata(uri: str, options: dict = None) -> dict:
-# def make_hash(uri: str, buff_size: int = 65536) -> dict:
-# def scan_files(uri: str, options: dict = None) -> dict:
-# def is_include(file_dict: dict, options: dict = None) -> bool:
-# def scan_zip(uri: str) -> dict:
-# def scan_tar(uri: str) -> dict:
 class TestUtilsBuildPath(unittest.TestCase):
     """A container class for the build path modeule test cases"""
 
@@ -29,6 +22,55 @@ class TestUtilsBuildPath(unittest.TestCase):
 
         self.assertGreater(len(result.get("folders",[])), 2, "Folders incorrect length")
 
+    def test_get_machine(self):
+        """ unit test for get machine"""
+        machine = get_machine()
+        logger.debug("MC: %s", machine)
+        assert "platform" in machine
+        assert "platform-release" in machine
+        assert "platform-version" in machine
+
+        assert "architecture" in machine
+
+        assert "hostname" in machine
+        assert "ip-address" in machine
+        assert "mac-address" in machine
+
+        assert "processor" in machine
+        assert "ram" in machine
+
+    def text_split_folder(self):
+        """ unit test for split_folder"""
+        uri = r"one\two\three\four\five"
+        splt = split_folder(path=uri)
+        logger.debug("URI: %s\n\tFldrs: %s", uri, splt)
+        assert len(splt) == 5
+
+        uri = r"\\bob\fred\sue"
+        splt = split_folder(path=uri)
+        logger.debug("URI: %s\n\tFldrs: %s", uri, splt)
+
+        uri = r"d:\bob\fred\sue"
+        splt = split_folder(path=uri)
+        logger.debug("URI: %s\n\tFldrs: %s", uri, splt)
+
+
+    def text_get_filename(self):
+        """ unit test for get_filename"""
+
+    def text_get_file_metadata(self):
+        """ unit test for """
+
+    def text_make_hash(self):
+        """ unit test for """
+
+    def text_fast_scan(self):
+        """ unit test for """
+
+    def text_scan_files(self):
+        """ unit test for """
+
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     unittest.main()

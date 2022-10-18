@@ -7,14 +7,6 @@ from lost_cat.utils.module_utils import load_module, load_modules, load_modulefi
 
 logger = logging.getLogger(__name__)
 
-# def build_path(uri: str) -> dict:
-# def get_filename(file_dict: dict) -> str:
-# def get_file_metadata(uri: str, options: dict = None) -> dict:
-# def make_hash(uri: str, buff_size: int = 65536) -> dict:
-# def scan_files(uri: str, options: dict = None) -> dict:
-# def is_include(file_dict: dict, options: dict = None) -> bool:
-# def scan_zip(uri: str) -> dict:
-# def scan_tar(uri: str) -> dict:
 class TestUtilsModule(unittest.TestCase):
     """A container class for the build path modeule test cases"""
 
@@ -60,4 +52,5 @@ class TestUtilsModule(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     unittest.main()

@@ -4,14 +4,18 @@ file scanning and zip file handling.
 copyright adscens.io 2022 / thoughtswin systems 2022
 """
 from datetime import datetime
+from genericpath import isfile
 import hashlib
 import io
 import logging
+import platform
+import psutil
 import re
 import os
 import tarfile
 import time
 from time import mktime
+import uuid
 import zipfile
 
 try:
@@ -19,10 +23,17 @@ try:
 except ImportError:
     from scandir import scandir, DirEntry
 
+from socket import gethostname, gethostbyname
 from urllib.parse import urlparse
 from validators import url as val_url
 
-from lost_cat.utils.phrase_utils import PhraseTool
+try:
+    from lost_cat.utils.phrase_utils import PhraseTool
+except ImportError:
+    import sys
+    from os import path
+    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+    from utils.phrase_utils import PhraseTool
 
 logger = logging.getLogger(__name__)
 
@@ -54,18 +65,41 @@ def func_switch_zip(ext: str, op_label: str) -> object:
         },
         ".tar.gz": {
             "open": open_tar,
-            "read": scan_tar,
+            "scan": scan_tar,
             "fetch": fetch_tar
         }
     }
     return func.get(ext,{}).get(op_label)
+
+def get_machine() -> dict:
+    """Will return a dictionary of the machine details"""
+    try:
+        _data={}
+        _data['platform']=platform.system()
+        _data['platform-release']=platform.release()
+        _data['platform-version']=platform.version()
+
+        _data['architecture']=platform.machine()
+        _data['hostname']=gethostname()
+        _data['ip-address']=gethostbyname(gethostname())
+
+        _data['mac-address']=':'.join(re.findall('..', '%012x' % uuid.getnode()))
+        _data['processor']=platform.processor()
+        _data['ram']=str(round(psutil.virtual_memory().total / (1024.0 **3)))+" GB"
+    except Exception as e:
+        logging.exception(e)
+
+    return _data
 
 def split_folder(path: str) -> list:
     """Will split the folder path in to a list of folders"""
     allparts = []
     while 1:
         parts = os.path.split(path)
-        if parts[0] == path:  # sentinel for absolute paths
+        if parts[0] == os.sep:
+            allparts.insert(0, parts[1])
+            break
+        elif parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
             break
         elif parts[1] == path: # sentinel for relative paths
@@ -83,7 +117,7 @@ def build_path(uri: str, path_type: str = "file") -> dict:
         "root": str
         "type": str
         "folders": list
-        "filename": str
+        "name": str
         "ext": str
     }"""
 
@@ -159,17 +193,17 @@ def get_filename(file_dict: dict) -> str:
         logger.debug("using current drive %s", file_dict.get("root"))
 
     if "folders" in file_dict:
-        path = os.path.join(file_dict.get("root"), *file_dict.get("folders",[]))
+        _path = os.path.join(file_dict.get("root"), *file_dict.get("folders",[]))
     else:
-        path = os.path.join(file_dict.get("root"), file_dict.get("folder",""))
+        _path = os.path.join(file_dict.get("root"), file_dict.get("folder",""))
 
     # expand the path for user and env vars
-    path = os.path.expandvars(os.path.expanduser(path))
+    _path = os.path.expandvars(os.path.expanduser(_path))
 
     if "name" in file_dict:
-        path = os.path.join(path, "{}{}".format(file_dict.get("name"), file_dict.get("ext","")))
+        _path = os.path.join(_path, "{}{}".format(file_dict.get("name"), file_dict.get("ext","")))
 
-    return path
+    return _path
 
 def get_file_metadata(uri: str, options: dict = None) -> dict:
     """return dict of file meats data based on the options passed
@@ -190,34 +224,51 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
     if not os.path.exists(uri):
         raise SourceDoesNotExist()
 
-    drv, path = os.path.splitdrive(uri)
-    dirpath = os.path.dirname(path)
-    filename = os.path.basename(path)
-    fname, ext = os.path.splitext(filename)
-    f_type = os.path.isfile(uri)
-    file_dict =  {
-            "type":f_type,
-            "root": f"{drv}{os.sep}",
-            "folder" : dirpath,
-            "name" : filename,
-            "ext": ext.lower()
-    }
+    if os.path.isfile(uri):
+        _f_type = "file"
+    elif os.path.isdir(uri):
+        _f_type = "folder"
+    else:
+        _f_type = "unclassified"
+
+    _drv, _path = os.path.splitdrive(uri)
+
+    if os.path.isfile(uri):
+        _path = os.path.dirname(_path)
+        _filename = os.path.basename(uri)
+        _fname, _ext = os.path.splitext(_filename)
+        _file_dict =  {
+                "domain":   gethostname(),
+                "type":     _f_type,
+                "root":     f"{_drv}{os.sep}",
+                "folder" :  _path,
+                "name" :    _filename,
+                "ext":      _ext.lower()
+        }
+    else:
+        _file_dict =  {
+                "domain":   gethostname(),
+                "type":     _f_type,
+                "root":     f"{_drv}{os.sep}",
+                "folder" :  _path
+        }
 
     if options and options.get("splitextension"):
-        file_dict["name"] = fname
+        _file_dict["name"] = _fname
 
     if options and options.get("splitfolders"):
-        file_dict["folders"] = split_folder(dirpath)
+        _file_dict["folders"] = split_folder(_path)
 
     if options and options.get("stats"):
         file_stats = os.stat(uri)
-        file_dict["accessed"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_atime))) #
-        file_dict["modified"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_mtime)))
-        file_dict["created"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_ctime)))
-        file_dict["size"] = file_stats.st_size
-        file_dict["mode"] = file_stats.st_mode
+        _file_dict["accessed"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_atime)))
+        _file_dict["modified"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_mtime)))
+        _file_dict["created"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_ctime)))
+        _file_dict["size"] = file_stats.st_size
+        _file_dict["mode"] = file_stats.st_mode
+        _file_dict["device"] = file_stats.st_dev
 
-    return file_dict
+    return _file_dict
 
 def make_hash(uri: str, buff_size: int = 65536) -> dict:
     """ Will hash the files for both MD5 and SHA1 and return a dict of the hashes"""
@@ -278,6 +329,7 @@ def scan_files(uri: str, options: dict = None) -> dict:
 
             file_dict =  {
                     "type":f_type,
+                    "uri": os_obj.path,
                     "root": f"{drv}{os.sep}",
                     "folder" : dirpath,
                     "name" : filename,
@@ -288,7 +340,7 @@ def scan_files(uri: str, options: dict = None) -> dict:
                 file_dict["name"] = fname
 
             if options and options.get("splitfolders"):
-                file_dict["folders"] = dirpath.split(os.sep) #split_folder(dirpath)
+                file_dict["folders"] = split_folder(dirpath) #dirpath.split(os.sep) #
 
             # filter the files...
             if not is_include(file_dict=file_dict, options=options):
@@ -296,9 +348,12 @@ def scan_files(uri: str, options: dict = None) -> dict:
 
             if options and options.get("stats"):
                 file_stats = os.stat(uri)
-                file_dict["accessed"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_atime))) #
-                file_dict["modified"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_mtime)))
-                file_dict["created"] = datetime.fromtimestamp(mktime(time.localtime(file_stats.st_ctime)))
+                file_dict["accessed"] = datetime.fromtimestamp(
+                        mktime(time.localtime(file_stats.st_atime))) #
+                file_dict["modified"] = datetime.fromtimestamp(
+                        mktime(time.localtime(file_stats.st_mtime)))
+                file_dict["created"] = datetime.fromtimestamp(
+                        mktime(time.localtime(file_stats.st_ctime)))
                 file_dict["size"] = file_stats.st_size
                 file_dict["mode"] = file_stats.st_mode
 
@@ -331,7 +386,12 @@ def scan_files(uri: str, options: dict = None) -> dict:
 
 def is_include(file_dict: dict, options: dict = None) -> bool:
     """will use the filter conditions and if all filters are matched
-    will return true"""
+    will return true
+    ...
+        filter
+            ext     : list of extensions to check against
+            regex   : regex phrase
+    """
     if not options:
         return True
 
@@ -396,24 +456,27 @@ def scan_tar(uri: str) -> dict:
         filepath = szf.name
         dirpath, fullname = os.path.split(filepath)
         filename, ext = os.path.splitext(fullname)
+        yr, mm, dd, hh, mn, ss = szf.date_time
+        #mod_date = datetime(year=yr, month=mm, day=dd, hour=hh, minute=mn, second=ss)
         sub_file = {
             "zipfile": uri,
             "path": filepath,
             "folder": dirpath,
             "name": filename,
             "size": szf.size,
+            "modified": datetime(year=yr, month=mm, day=dd, hour=hh, minute=mn, second=ss),
             "ext": ext.lower(),
         }
         files.append(sub_file)
 
     return files
 
-def fetch_zip(file_obj: zipfile.ZipFile, item_path: str) -> object:
+def fetch_zip(file_obj: zipfile.ZipFile, item_path: str) -> io.BytesIO:
     """for a given zip file, return the item"""
     _data = file_obj.read(item_path)
     return io.BytesIO(_data)
 
-def fetch_tar(file_obj: tarfile.TarFile, item_path: str) -> object:
+def fetch_tar(file_obj: tarfile.TarFile, item_path: str) -> io.BytesIO:
     """For a given tarfile return the item"""
     _data = file_obj.read(item_path)
     return io.BytesIO(_data)

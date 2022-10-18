@@ -27,25 +27,25 @@ class BaseProcessor():
 
     @property
     def name(self):
-        """ """
+        """the freindly name of the class """
         return self._name
 
     @property
     def version(self):
-        """ """
+        """the version of the class """
         return self._version
 
     @property
     def semiphore(self):
-        """ """
+        """the semiphore to check for end the queue reads """
         return self._semiphore
 
     def in_queue(self, in_queue: mp.Queue):
-        """ """
+        """the queue to use for input """
         self.input = in_queue
 
     def out_queue(self, out_queue: mp.Queue):
-        """ """
+        """the queue to use for output """
         self.output = out_queue
 
     def metadata(self) -> dict:
@@ -65,7 +65,7 @@ class BaseProcessor():
         return False
 
     def close(self, force: bool = False, block: bool = False, timeout: int = -1):
-        """will close the """
+        """will close the objects """
         logger.debug("%s %s %s", force, block, timeout)
         if self.input:
             # check for force and / or block
@@ -82,7 +82,7 @@ class BaseProcessor():
 
             self.input = None
 
-    def build_path(self, uri: str) -> dict:
+    def build_path(self, uri: str, hint: str = "n/a") -> dict:
         """will accept a uri and will turn it to a dictionary
         for later use.
         and return a dictionary

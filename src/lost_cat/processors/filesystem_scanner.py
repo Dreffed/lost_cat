@@ -97,7 +97,7 @@ class FileScanner(BaseProcessor):
 
         except SourceDoesNotExist:
             logger.debug("Provide uri does not exist %s", uri)
-            return
+            return None
 
         if re.search(r"[\\\/]+", uri):
             _uri = os.path.expandvars(os.path.expanduser(uri))
@@ -130,7 +130,8 @@ class FileScanner(BaseProcessor):
             src["domain"] = _fmd.get("domain")
 
         else:
-            raise SourceNotHandled(uri=uri, message="provided uri could not be understood by parser!")
+            raise SourceNotHandled(uri=uri,
+                    message="provided uri could not be understood by parser!")
 
         return src
 

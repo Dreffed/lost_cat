@@ -3,26 +3,27 @@ file scanning and zip file handling.
 @author: Dreffed
 copyright adscens.io 2022 / thoughtswin systems 2022
 """
-from datetime import datetime
 import hashlib
 import io
 import logging
 import os
 import platform
-import psutil
 import re
 import tarfile
 import time
-from time import mktime
 import uuid
 import zipfile
+from datetime import datetime
+from time import mktime
+
+import psutil
 
 try:
-    from os import scandir, DirEntry
+    from os import DirEntry, scandir
 except ImportError:
     from scandir import scandir, DirEntry
 
-from socket import gethostname, gethostbyname
+from socket import gethostbyname, gethostname
 from urllib.parse import urlparse
 from validators import url as val_url
 
@@ -295,7 +296,8 @@ def make_hash(uri: str, buff_size: int = 65536) -> dict:
     return hashes
 
 def fast_scan(uri: str) -> DirEntry:
-    """"""
+    """A fast scan routine to generate a
+    simple file objecvt set """
     for os_obj in scandir(path=uri):
         try:
             if os_obj.is_dir(follow_symlinks=False):

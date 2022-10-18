@@ -218,7 +218,8 @@ class LostCat():
                     continue
                 _pname = r.get("processorname")
                 if _pname not in self._processors:
-                    _pname, _uri, base_class, obj = self.resolve_class(module_path=r.get("processoruri"))
+                    _pname, _uri, base_class, obj = self.resolve_class(
+                                module_path=r.get("processoruri"))
                     if obj:
                         obj.processorid = r.get("processorid")
 
@@ -372,7 +373,7 @@ class LostCat():
         return _pname, _uri, base_class, obj
 
     def add_typehandler(self, obj, _pname):
-        # now to set the uritypes it can work with...
+        """ now to set the uritypes it can work with... """
         for _uritype in obj.avail_config().get("uritypes",[]):
             if _uritype not in self._urihandlers:
                 self._urihandlers[_uritype] = []
@@ -634,8 +635,12 @@ class LostCat():
         return _uri_obj
 
     def save_queue(self, _out_queue):
-        # load the caches...
-        #self.load_caches()
+        """ Save the data from the queue,
+        structured by the following:
+            processorid
+            domain / md
+            uri / md
+            version / md"""
 
         _stats = {
             "loaded": 0,

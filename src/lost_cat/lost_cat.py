@@ -511,7 +511,8 @@ class LostCat():
                 ORDER BY uris.uri_type"""
 
         for row in self._db.sql(sql=sql):
-            # add to the sources dict
+            # add to the sources dict'
+            logger.debug(row)
             _uri_type = row.get("uritype")
             _processor = row.get("processorname")
             _uri = row.get("uri")
@@ -977,6 +978,7 @@ class LostCat():
                     _in_queues[_pname] = mp.Queue()
 
                 for _src, _uri_obj in sourceobj.get("uris").items():
+                    logger.debug("\tAdd: %s", _uri_obj)
                     _in_queues[_pname].put(_uri_obj)
 
         # create a thread for each processor...
@@ -1064,9 +1066,12 @@ class LostCat():
             # default_alias
             # default_groups
             # default_metadata
-            obj.avail_functions().get("alias")(tags=obj.default_alias())
-            obj.avail_functions().get("groups")(tags=obj.default_groups())
-            obj.avail_functions().get("metadata")(tags=obj.default_metadata())
+            if "alias" in obj.avail_functions():
+                obj.avail_functions().get("alias")(tags=obj.default_alias())
+            if "groups" in obj.avail_functions():
+                obj.avail_functions().get("groups")(tags=obj.default_groups())
+            if "metadata" in obj.avail_functions():
+                obj.avail_functions().get("metadata")(tags=obj.default_metadata())
 
             # initi the parser...
             obj.avail_functions().get("parser")()

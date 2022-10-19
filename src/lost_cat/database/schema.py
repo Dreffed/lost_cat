@@ -53,6 +53,7 @@ class DomainMD(Base):
     domainid = Column(Integer, ForeignKey("domains.id"), primary_key = True)
     key = Column(String(255), primary_key = True)
     added = Column(DateTime, default = func.now())
+    modified = Column(DateTime)
     value = Column(String())
 
     def __repr__(self):

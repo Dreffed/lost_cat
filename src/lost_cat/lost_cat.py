@@ -575,8 +575,9 @@ class LostCat():
             if not _domain:
                 _domain = Domains(domain=_uri_obj.get("domain"), domain_type=_uri_obj.get("domain_type"))
                 _db_sess.add(_domain)
-                _domid = _domain.id
                 _db_sess.commit()
+
+            _domid = _domain.id
 
         except Exception as ex:
             logger.error("ERROR adding domain %s %s", _uri_obj, ex)

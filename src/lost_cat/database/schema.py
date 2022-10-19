@@ -49,7 +49,7 @@ class Domains(Base):
 
 class DomainMD(Base):
     __table_args__ = {'extend_existing': True}
-    __tablename__ = "domains"
+    __tablename__ = "domainmd"
     domainid = Column(Integer, ForeignKey("domains.id"), primary_key = True)
     key = Column(String(255), primary_key = True)
     added = Column(DateTime, default = func.now())

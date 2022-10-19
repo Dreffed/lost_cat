@@ -2,13 +2,8 @@ import fitz
 import logging
 import os
 import sys
-try:
-    from parsers.base_parser import BaseParser
-except:
-    currentdir = os.path.dirname(os.path.abspath(os.getcwd()))
-    if not currentdir in sys.path:
-        sys.path.insert(0, currentdir)
-    from ..parsers.base_parser import BaseParser
+
+from lost_cat.parsers.base_parser import BaseParser
 
 logger = logging.getLogger(__name__)
 

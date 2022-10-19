@@ -5,9 +5,8 @@ import logging
 import os
 import sys
 
-from lost_cat.base_parser import BaseParser
-    from utils.path_utils import func_switch_zip, get_file_metadata
-
+from lost_cat.parsers.base_parser import BaseParser
+from lost_cat.utils.path_utils import func_switch_zip, get_file_metadata
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 """the base class for the scanners"""
 import logging
 import multiprocessing as mp
-
 from time import sleep, time
 
 logger = logging.getLogger(__name__)

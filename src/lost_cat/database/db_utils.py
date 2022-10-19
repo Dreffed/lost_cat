@@ -1,7 +1,7 @@
 """A module to wrap the database functions and allow the syst4em to wru"""
 import logging
 
-from database.schema import Base
+from lost_cat.database.schema import Base
 from sqlalchemy import create_engine, MetaData, Table
 from sqlalchemy.orm import sessionmaker, session
 

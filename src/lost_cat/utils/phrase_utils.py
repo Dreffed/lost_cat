@@ -1,7 +1,6 @@
 """A mnodule for the Phrase Tool code and class"""
-
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,11 @@
 """This is a class module for the anonimizer"""
-
-from asyncio.log import logger
+import logging
 import random
 import string
 import uuid
 from datetime import date, datetime
+
+logger = logging.getLogger(__name__)
 
 # create unique id
 class TagAnon():

@@ -2,6 +2,7 @@
 import os
 import logging
 import PIL.Image, PIL.ExifTags
+
 from lost_cat.utils.tag_anon import TagAnon
 
 logger = logging.getLogger(__name__)

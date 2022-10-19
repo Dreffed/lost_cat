@@ -3,30 +3,18 @@ import logging
 import multiprocessing as mp
 import os
 import re
-from socket import gethostname
 import threading as td
+from queue import Empty
+from socket import gethostname
 from urllib.parse import urljoin, urlparse
 
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, __version__
-from utils.path_utils import SourceDoesNotExist, build_path, get_filename, get_file_metadata
-
-try:
-    from processors.base_processor import BaseProcessor, UnableToLoadProcessor, InvalidURIGiven
-except ImportError:
-    import sys
-    from os import path
-    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-    from base_processor import BaseProcessor
-
-try:
-    from utils.path_utils import scan_files, SourceNotHandled
-except ImportError:
-    import sys
-    from os import path
-    sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
-    from utils.path_utils import scan_files, SourceNotHandled
-
-from queue import Empty
+from azure.storage.blob import (BlobClient, BlobServiceClient, ContainerClient,
+                                __version__)
+from lost_cat.processors.base_processor import (BaseProcessor, InvalidURIGiven,
+                                                UnableToLoadProcessor)
+from lost_cat.utils.path_utils import (SourceDoesNotExist, SourceNotHandled,
+                                       build_path, get_file_metadata,
+                                       get_filename, scan_files)
 
 logger = logging.getLogger(__name__)
 

@@ -2,13 +2,8 @@
 import logging
 import os
 import sys
-try:
-    from utils.tag_anon import TagAnon
-except:
-    currentdir = os.path.dirname(os.path.abspath(os.getcwd()))
-    if not currentdir in sys.path:
-        sys.path.insert(0, currentdir)
-    from ..utils.tag_anon import TagAnon
+
+from lost_cat.utils.tag_anon import TagAnon
 
 logger = logging.getLogger(__name__)
 

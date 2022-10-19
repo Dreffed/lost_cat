@@ -1,4 +1,4 @@
-""" Utiliteis to  """
+""" Utilities to build and manage TRIEs """
 
 import logging
 import string

@@ -109,3 +109,70 @@ class WordProcessor(BaseProcessor):
     def metadata_tags(self, tags: list):
         """Sets the tags to use for general metadata"""
         self._md_tags = tags
+
+    def parser(self) -> None:
+        """ load the for each match to a parser, load the
+        an in_queue with values, then call the *_processer
+        to process the queue.
+        The parser enabled processer will use a helper file to handle the files"""
+        use_threads = self.settings.get("threads",{}).get("count",5)
+
+        for t_idx in range(use_threads):
+            logger.info("Thread: %s",t_idx)
+            scan_q = td.Thread(target=self.parser_file)
+            scan_q.start()
+            scan_q.join()
+
+    def parser_file(self):
+        """A parser scanner function, quick and dirty"""
+        t_settings = self.settings.get("threads",{})
+        self.input.put(self.semiphore)
+
+        while self.input:
+            try:
+                q_item = self.input.get(timeout=t_settings.get("timeout")) if self.input else None
+                if q_item == self.semiphore:
+                    break
+
+                # if the user wants to kill the queue if there are not entries...
+                # requires timeout set, otherwise the queue get blocks...
+                if not q_item and self.settings.get("threads",{}).get("stop"):
+                    break
+
+                _uri=q_item.get("uri")
+                if not os.path.exists(_uri):
+                    # most likely a zipfile...
+                    zf = zipfile.ZipFile(q_item.get("zipfile"))
+                    file_data = zf.read(q_item.get("uri"))
+                    bytes_io = io.BytesIO(file_data)
+                    _fileobj = WordParser(bytes_io=bytes_io)
+
+                else:
+                    _fileobj = WordParser(uri=_uri)
+
+                # return the file metadata and information...
+                # load the
+                _fileobj.set_anonimizer(anonimizer=self._anon)
+                _fileobj.set_group_tags(tags=self._grp_tags)
+                _fileobj.set_metadata_tags(tags=self._md_tags)
+                _filemd = _fileobj.parser()
+                _fileobj.close()
+
+                # create the returning object
+                _data = {
+                    "processorid": self.processorid,
+                    "uri id": q_item.get("uriid"),
+                    "uri_type": q_item.get("uri_type"),
+                    "uri": q_item.get("uri"),
+                    "metadata": {},
+                    "versions": {
+                        "__latest__": True,
+                        "versionmd" : _filemd
+                    }
+                }
+
+                logger.debug("O Data: %s", _data)
+                self.output.put(_data)
+
+            except Empty:
+                break

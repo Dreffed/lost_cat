@@ -215,16 +215,16 @@ def get_file_metadata(uri: str, options: dict = None) -> dict:
                 "bytes": szie in mb, gb, etc.
 
     """
-    if not os.path.exists(uri):
-        raise SourceDoesNotExist()
-
-    if os.path.isfile(uri):
-        _f_type = "file"
-    elif os.path.isdir(uri):
-        _f_type = "folder"
+    if os.path.exists(uri):
+        if os.path.isfile(uri):
+            _f_type = "file"
+        elif os.path.isdir(uri):
+            _f_type = "folder"
+        else:
+            _f_type = "unclassified"
     else:
         _f_type = "unclassified"
-
+        
     _drv, _path = os.path.splitdrive(uri)
 
     if os.path.isfile(uri):

@@ -17,7 +17,7 @@ def get_dicomreportfields():
             "studydate" :{
                 "match": ["study date"],
             },
-            "sex" :{
+            "patientsex" :{
                 "match": ["sex", "gender"],
             },
             "patientid" :{
@@ -56,6 +56,16 @@ def get_dicomreportfields():
             },
             "disclaimer" :{
                 "regex": ["^disclaimer:(?P<phrase>.*)$"],
+                "groups": {"phrase"},
+                "fstring": "{phrase}",
+            },
+            "advice" :{
+                "regex": ["^[advice|adv][: ]+(?P<phrase>.*)$"],
+                "groups": {"phrase"},
+                "fstring": "{phrase}",
+            },
+            "findings" :{
+                "regex": ["^(?P<phrase>.* findings are .*)$"],
                 "groups": {"phrase"},
                 "fstring": "{phrase}",
             },

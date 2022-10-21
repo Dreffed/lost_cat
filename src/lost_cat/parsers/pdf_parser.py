@@ -1,3 +1,4 @@
+import datetime
 import fitz
 import logging
 import os
@@ -47,7 +48,14 @@ class PDFParser(BaseParser):
 
     def parser(self) -> dict:
         """will parser the open file and retrn the result"""
-        return self.get_metadata()
+        _data = {}
+        for _mdk, _mdv in self.get_metadata().items():
+            if _mdk in ["creationdate", "moddate"]:
+                _data[_mdk] = datetime.datetime.strptime(_mdv.replace("'", ""), "D:%Y%m%d%H%M%S%z")
+            else:
+                _data[_mdk] = _mdv
+
+        return _data
 
     def get_toc(self) -> dict:
         """ """

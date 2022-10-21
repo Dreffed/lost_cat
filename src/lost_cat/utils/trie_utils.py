@@ -81,7 +81,7 @@ def process_sentence(sentence: str, roottrie: TrieWord) -> dict:
     phrases = []
     curr_phrase = []
     node = roottrie
-    sentence = sentence.replace("_", " ").replace("-", " ").translate(str.maketrans('', '', string.punctuation))
+    sentence = sentence.replace(r" \n", " ").replace("  ", " ").replace("_", " ").replace("-", " ").translate(str.maketrans('', '', string.punctuation))
     logger.debug("Sentence: %s", sentence)
 
     for idx, word in enumerate([x for x in sentence.split()]):
@@ -159,33 +159,3 @@ def process_sentence(sentence: str, roottrie: TrieWord) -> dict:
         "tagged": tagged,
         "phrases": phrases,
     }
-
-
-if __name__ == "__main__":
-    import sys
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-    phrases = [
-            "one", "one two", "one two three", "one two three four",
-            "two four", "two five", "six", "seven eight",
-        ]
-
-    sentences = [
-            "one two seven eight",
-            "one one two eight seven nine",
-            "one one two seven",
-            "two six seven eight",
-            "four three two one",
-            "one two three four five",
-            "seven five three four",
-        ]
-
-    obj = TrieWord()
-    for p in phrases:
-        obj.insert(phrase=p)
-
-    for s in sentences:
-        logger.info(" ")
-        tags = process_sentence(sentence=s, roottrie=obj.root)
-        for t in tags.get("tagged"):
-            logger.info("\tT: %s", t)

@@ -50,11 +50,8 @@ class PDFParser(BaseParser):
         """will parser the open file and retrn the result"""
         _data = {}
         for _mdk, _mdv in self.get_metadata().items():
-            if _mdk in ["creationdate", "moddate"]:
-                _data[_mdk] = datetime.datetime.strptime(_mdv.replace("'", ""), "D:%Y%m%d%H%M%S%z")
-            else:
-                _data[_mdk] = _mdv
-
+            _mdk = self._alias_tags.get(_mdk, _mdk)
+            _data[_mdk] = _mdv
         return _data
 
     def get_toc(self) -> dict:
@@ -86,7 +83,14 @@ class PDFParser(BaseParser):
 
     def get_metadata(self) -> dict:
         """ """
-        return self._file.metadata
+        _data = {}
+        for _mdk, _mdv in self._file.metadata.items():
+            if _mdk in ["creationDate", "modDate"]:
+                _data[_mdk] = datetime.datetime.strptime(_mdv.replace("'", ""), "D:%Y%m%d%H%M%S%z").strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                _data[_mdk] = _mdv
+
+        return _data
 
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""

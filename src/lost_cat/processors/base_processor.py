@@ -3,6 +3,8 @@ import logging
 import multiprocessing as mp
 from time import sleep, time
 
+from lost_cat.utils.tag_anon import TagAnon
+
 logger = logging.getLogger(__name__)
 
 class UnableToLoadProcessor(Exception):
@@ -24,6 +26,12 @@ class BaseProcessor():
         self._name = f"{self.__class__.__name__.lower()} {self._version}"
         self._semiphore = f"DONE: {self._name}"
 
+        # init the tags lists
+        self._anon = None
+        self._grp_tags = {}
+        self._md_tags = {}
+        self._alias_tags = {}
+
     @property
     def name(self):
         """the freindly name of the class """
@@ -38,6 +46,23 @@ class BaseProcessor():
     def semiphore(self):
         """the semiphore to check for end the queue reads """
         return self._semiphore
+
+    def anonimizer(self, anonimizer: TagAnon) -> None:
+        """Allows for the metadata tags to be anonymized"""
+        self._anon = anonimizer
+
+    def alias_tags(self, tags: dict) -> None:
+        """Allows for the metadata tags to be anonymized"""
+        self._alias_tags = tags
+
+    def groups_tags(self, tags: list) -> None:
+        """Sets the metadata tags to be used for grouping
+        The grouping is used to organize the structure"""
+        self._grp_tags = tags
+
+    def metadata_tags(self, tags: list):
+        """Sets the tags to use for general metadata"""
+        self._md_tags = tags
 
     def in_queue(self, in_queue: mp.Queue):
         """the queue to use for input """

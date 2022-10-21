@@ -8,7 +8,6 @@ from queue import Empty
 
 from lost_cat.parsers.dicom_parser import DICOMParser
 from lost_cat.processors.base_processor import BaseProcessor
-from lost_cat.utils.tag_anon import TagAnon
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +33,6 @@ class DICOMProcessor(BaseProcessor):
         logger.debug("Name: %s", self._name)
         logger.debug("Semiphore: %s", self._semiphore)
         logger.debug("Settings: %s", self.settings)
-
-        # init the tags lists
-        self._anon = None
-        self._grp_tags = {}
-        self._md_tags = {}
-        self._alias_tags = {}
 
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""
@@ -143,23 +136,6 @@ class DICOMProcessor(BaseProcessor):
             'RescaleIntercept',
             'RescaleSlope'
         ]
-
-    def anonimizer(self, anonimizer: TagAnon) -> None:
-        """Allows for the metadata tags to be anonymized"""
-        self._anon = anonimizer
-
-    def alias_tags(self, tags: list) -> None:
-        """Allows for the metadata tags to be anonymized"""
-        self._alias_tags = tags
-
-    def groups_tags(self, tags: list) -> None:
-        """Sets the metadata tags to be used for grouping
-        The grouping is used to organize the structure"""
-        self._grp_tags = tags
-
-    def metadata_tags(self, tags: list):
-        """Sets the tags to use for general metadata"""
-        self._md_tags = tags
 
     def parser(self) -> None:
         """ load the for each match to a parser, load the

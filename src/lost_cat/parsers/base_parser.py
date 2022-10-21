@@ -62,8 +62,10 @@ class BaseParser():
         """Allows for the metadata tags to be anonymized"""
         self._anon = anonimizer
 
-    def set_alias_tags(self, tags: list) -> None:
-        """Allows for the metadata tags to be anonymized"""
+    def set_alias_tags(self, tags: dict) -> None:
+        """Allows for the metadata tags to be anonymized
+            <tag to rename>: <tag new name>
+        '"""
         self._alias_tags = tags
 
     def set_group_tags(self, tags: list) -> None:

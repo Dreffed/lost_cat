@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 def get_dicomreportfields():
     """ Returns the template for the DICOM Reports"""
     return {
-            "age" :{
+            "patientage" :{
                 "match": ["age"],
             },
             "reportdate" :{

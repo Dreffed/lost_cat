@@ -38,7 +38,7 @@ class DICOMProcessor(BaseProcessor):
         """Returns a dict prointing to the available functions"""
         return {
             "parser": self.parser,
-            "anonimizer": self.anonimizer,
+            "anon": self.anon,
             "tags_alias": self.alias_tags,
             "tags_groups": self.groups_tags,
             "tags_metadata": self.metadata_tags,
@@ -95,9 +95,7 @@ class DICOMProcessor(BaseProcessor):
     @staticmethod
     def default_alias() -> dict:
         """return defaults"""
-        return {
-            "*PatientID": "*PatientName"
-        }
+        return {}
 
     @staticmethod
     def default_groups() -> list:
@@ -178,9 +176,10 @@ class DICOMProcessor(BaseProcessor):
                     _dcmobj = DICOMParser(uri=_uri)
 
                 # load the
-                _dcmobj.set_anonimizer(anonimizer=self._anon)
-                _dcmobj.set_group_tags(tags=self._grp_tags)
-                _dcmobj.set_metadata_tags(tags=self._md_tags)
+                _dcmobj.set_anon(anon=self._anon)
+                _dcmobj.set_alias_tags(tags=self._alias_tags)
+                _dcmobj.set_groups_tags(tags=self._groups_tags)
+                _dcmobj.set_metadata_tags(tags=self._metadata_tags)
                 _dcmmd = _dcmobj.parser()
                 _dcmobj.close()
 

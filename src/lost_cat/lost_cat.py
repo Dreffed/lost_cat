@@ -136,9 +136,7 @@ class LostCat():
         self._versionmd = {}            # K: versionid, key  | V: id, value
 
         # tags might be better to be set at the scanner, parser level
-        self._tags_exp = dict()         # the metadata tags to export
-        self._group_tags = dict()       # the tags to use for grouping
-        self._set_alias_tags = dict()   # a set of tags to use for aliasing
+        self._tags = dict()             # the provided tags
 
         # set the objects
         if options:
@@ -179,6 +177,17 @@ class LostCat():
         if self._artifacts:
             logger.debug("Closing shelve %s", len(self._artifacts))
             self._artifacts.close()
+
+    def set_tags(self, tags: dict) -> None:
+        """Accepts a dictionary of tags expecets:
+            alias: dict of k,v pairs, k is field to convert v is the field name
+            groups: list of tags to use for grouping
+            metadata: list of tags to metadata
+            anon: list of tags to run through the anonimizer
+            <class name>: { alias, group, metadata}
+        """
+        logger.debug("Added tags: %s", tags)
+        self._tags = tags
 
     def load_processors(self):
         """Will load the core information from the underlying datastores"""
@@ -230,6 +239,20 @@ class LostCat():
                         "obj": obj,
                         "metadata": _pmd.get(_pname),
                     }
+
+                    _tags = None
+                    if not (_tags := self._tags.get("pname")):
+                        # load the default _tags
+                        if self._tags:
+                            _tags ={
+                                "alias": self._tags.get("alias", {}),
+                                "groups": self._tags.get("groups", {}),
+                                "metadata": self._tags.get("metadata", {}),
+                                "anon": self._tags.get("anon", {}),
+                            } 
+
+                    if _tags:
+                        self._processors[_pname]["tags"] = _tags
 
                     self.add_typehandler(obj, _pname)
 
@@ -311,6 +334,20 @@ class LostCat():
                         "obj": obj,
                         "metadata": _pmd.get(_pname),
                     }
+            
+            _tags = None
+            if not (_tags := self._tags.get("pname")):
+                # load the default _tags
+                if self._tags:
+                    _tags ={
+                        "alias": self._tags.get("alias", {}),
+                        "groups": self._tags.get("groups", {}),
+                        "metadata": self._tags.get("metadata", {}),
+                        "anon": self._tags.get("anon", {}),
+                    } 
+
+            if _tags:
+                self._processors[_pname]["tags"] = _tags
 
         self.add_typehandler(obj, _pname)
         #self.add_filterhandler(obj, _pname)
@@ -541,9 +578,7 @@ class LostCat():
             "uri: str
         """
         logger.debug("Processor: %s URI: %s ", processor, uri)
-
-        _processor = self._processors.get(processor)
-        if _processor:
+        if _processor := self._processors.get(processor):
             try:
                 _processor["obj"] = _processor.get("class")()
                 _uri_obj = _processor.get("obj").build_path(uri=uri)
@@ -564,7 +599,7 @@ class LostCat():
         _uritype = _uri_obj.get("type","<>")
 
         if uri in self._sources.get(_uritype,{}).get("uris",{}) and overwrite is False:
-            return _uri_obj
+            return self._sources.get(_uritype,{}).get("uris",{}).get(uri,{})
 
         # add the uri to the sources...
         _procid = _processor.get("id")
@@ -621,8 +656,8 @@ class LostCat():
             _db_sess.rollback()
 
         _uri_obj["uriid"] = _uri.id
-        _uri_obj["procsserorid"] = _procid
-        _uri_obj["procsserorname"] = processor
+        _uri_obj["processorid"] = _procid
+        _uri_obj["processorname"] = processor
 
         # add to teh source dictionary for root items
         if isroot is True:
@@ -719,14 +754,24 @@ class LostCat():
                 _db_sess.flush()
 
                 # get the uri
+                # check for the parent id...
+                # if a file in a zip file get the id of the zipfile...
+                # else used the base_id
+
+                # have the source uriid that generated the file
+                _uriid_source = o_item.get("uriid_source", 0)
+
+                if _uri_zipfile := o_item.get("metadata",{}).get("zipfile"):
+                    # the url for the zip file..
+                    if _uri_zf := _db_sess.query(URIs).filter(URIs.uri == _uri_zipfile).one_or_none():
+                        _uriid_source = _uri_zf.id
+                    else:
+                        logger.warning("Unable to fidn zipfile id %s", _uri_zipfile)
+
                 # handle zip files as well
-                if o_item.get("metadata",{}).get("zipfile"):
-                    _uri = _db_sess.query(URIs).join(URIMD).filter(
-                            URIs.uri == o_item.get("uri"),
-                            URIMD.key == 'zipfile',
-                            URIMD.value == o_item.get("metadata",{}).get("zipfile")).one_or_none()
-                else:
-                    _uri = _db_sess.query(URIs).filter(URIs.uri == o_item.get("uri")).one_or_none()
+                _uri = _db_sess.query(URIs).filter(
+                        URIs.uri == o_item.get("uri"),
+                        URIs.uriid_parent == _uriid_source).one_or_none()
 
                 if not _uri:
                     logger.debug("ADD: %s", o_item.get("uri"))
@@ -734,6 +779,7 @@ class LostCat():
                             domainid = _domain.id,
                             uri = o_item.get("uri"),
                             uri_type = o_item.get("uri_type"),
+                            uriid_parent = _uriid_source,
                             root=False)
                     _db_sess.add(_uri)
                     _db_sess.flush()
@@ -970,22 +1016,25 @@ class LostCat():
         _processors = []
 
         for uritype, sourceobj in self._sources.items():
+            logger.debug("Uri Type: %s\tObj: %s", uritype, sourceobj)
+
             # <TODO: add a check to match type to a processor>
             for _pname in sourceobj.get("processors"):
                 if _pname not in _processors:
+                    logger.debug("Name: %s\tInitiate queue", _pname)
                     _processors.append(_pname)
                     # add as a queue
                     _in_queues[_pname] = mp.Queue()
 
                 for _src, _uri_obj in sourceobj.get("uris").items():
-                    logger.debug("\tAdd: %s", _uri_obj)
+                    logger.debug("Name: %s\tAdd: %s", _pname, _uri_obj)
                     _in_queues[_pname].put(_uri_obj)
 
         # create a thread for each processor...
         for _pname, _que in _in_queues.items():
             #
             _processor = self._processors.get(_pname, {})
-            logger.info(_processor)
+            logger.debug("Name: %s\n\tProcessor: %s", _pname, _processor)
 
             obj = _processor.get("obj")
             if not obj:
@@ -1060,18 +1109,20 @@ class LostCat():
             obj.out_queue(out_queue=_out_queue)
 
             # set the helper functions...
-            #if self._anonimizer:
-            #    obj.avail_functions().get("anonimizer")(anonimizer=self._anonimizer(obj.default_anon()))
+            if self._anonimizer:
+                obj.avail_functions().get("anonimizer")(anonimizer=self._anonimizer(obj.default_anon()))
 
-            # default_alias
-            # default_groups
-            # default_metadata
-            if "alias" in obj.avail_functions():
-                obj.avail_functions().get("alias")(tags=obj.default_alias())
-            if "groups" in obj.avail_functions():
-                obj.avail_functions().get("groups")(tags=obj.default_groups())
-            if "metadata" in obj.avail_functions():
-                obj.avail_functions().get("metadata")(tags=obj.default_metadata())
+            if _tags := _proc.get("tags",{}):
+                for _fld in ["alias", "groups", "metadata"]:
+                    if _func := obj.avail_functions().get(f"tags_{_fld}"):
+                        _func(tags=_tags.get(_fld))
+            else:
+                if "tags_alias" in obj.avail_functions():
+                    obj.avail_functions().get(f"tags_alias")(tags=obj.default_alias())
+                if "tags_groups" in obj.avail_functions():
+                    obj.avail_functions().get("tags_groups")(tags=obj.default_groups())
+                if "tags_metadata" in obj.avail_functions():
+                    obj.avail_functions().get("tags_metadata")(tags=obj.default_metadata())
 
             # initi the parser...
             obj.avail_functions().get("parser")()

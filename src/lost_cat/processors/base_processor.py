@@ -27,9 +27,9 @@ class BaseProcessor():
         self._semiphore = f"DONE: {self._name}"
 
         # init the tags lists
-        self._anon = None
-        self._grp_tags = {}
-        self._md_tags = {}
+        self._anonobj = None
+        self._groups_tags = []
+        self._metadata_tags = []
         self._alias_tags = {}
 
     @property
@@ -47,9 +47,9 @@ class BaseProcessor():
         """the semiphore to check for end the queue reads """
         return self._semiphore
 
-    def anonimizer(self, anonimizer: TagAnon) -> None:
+    def anon(self, anon: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
-        self._anon = anonimizer
+        self._anonobj = anon
 
     def alias_tags(self, tags: dict) -> None:
         """Allows for the metadata tags to be anonymized"""
@@ -58,11 +58,11 @@ class BaseProcessor():
     def groups_tags(self, tags: list) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
-        self._grp_tags = tags
+        self._group_tags = tags
 
     def metadata_tags(self, tags: list):
         """Sets the tags to use for general metadata"""
-        self._md_tags = tags
+        self._metadata_tags = tags
 
     def in_queue(self, in_queue: mp.Queue):
         """the queue to use for input """

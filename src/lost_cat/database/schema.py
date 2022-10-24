@@ -1,6 +1,5 @@
-
 from sqlalchemy import Column, ForeignKey, func
-from sqlalchemy import Integer, String, DateTime, Boolean
+from sqlalchemy import Integer, String, DateTime, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, backref
 
@@ -63,7 +62,10 @@ class URIs(Base):
     __table_args__ = {'extend_existing': True}
     __tablename__ = "uris"
     id = Column(Integer, primary_key=True)
-    uri = Column(String(), unique = True)
+    uriid_parent = Column(Integer, foreign_key="uris.id", default=0)
+
+    uri = Column(String())
+
     uri_type = Column(String(15))
     domainid = Column(Integer, ForeignKey("domains.id"))
     root = Column(Boolean, default = False)
@@ -74,6 +76,9 @@ class URIs(Base):
     #processors = relationship("Processors", secondary= "processoruris") # back_populates = "uri")
     umd = relationship("URIMD")
     versions = relationship("Versions")
+
+    # contstaints
+    UniqueConstraint("uriid_parent", "uri", name='uri_unique')
 
     def __repr__(self):
         return f"URI(id={self.id!r}, name={self.uri!r})"

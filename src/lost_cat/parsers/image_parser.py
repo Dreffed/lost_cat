@@ -24,8 +24,8 @@ class EXIFParser:
         self._anon = None
         self._uri = uri
         self._img = PIL.Image.open(self._uri)
-        self._grp_tags = {}
-        self._export_tags = {}
+        self._groups_tags = {}
+        self._metadata_tags = {}
         self._alias_tags = {}
 
     def __str__(self):
@@ -36,16 +36,16 @@ class EXIFParser:
         if self._img:
             self._img = None
 
-    def set_anonimizer(self, anonimizer: TagAnon) -> None:
+    def set_anon(self, anon: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
-        self._anon = anonimizer
+        self._anon = anon
 
     def set_group_tags(self, tags: dict) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
         self._grp_tags = tags
 
-    def set_export_tags(self, tags):
+    def set_metadata_tags(self, tags):
         """Sets the tags to use for general metadata"""
         self._export_tags = tags
 

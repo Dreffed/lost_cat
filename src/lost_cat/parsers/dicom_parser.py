@@ -38,8 +38,9 @@ class DICOMParser(BaseParser):
         return {
             "parser": self.parser,
             "array": self.get_array,
-            "tag_metadata": self.set_metadata_tags,
-            "tag_groups": self.set_group_tags,
+            "tags_alias": self.set_alias_tags,
+            "tags_metadata": self.set_metadata_tags,
+            "tags_groups": self.set_groups_tags,
             "image": self.get_image,
         }
 

@@ -183,7 +183,7 @@ class FileScanner(BaseProcessor):
                     _data = {
                         "domain": _hostname,
                         "processorid": self.processorid,
-                        "uriid": q_item.get("uriid"),
+                        "uriid_source": q_item.get("uriid"),
                         "uri_type": fs_obj.get("type"),
                         "uri": _uri, #fs_obj.get("uri"),
                         "metadata": {
@@ -215,6 +215,7 @@ class FileScanner(BaseProcessor):
                         _data = {
                             "domain": _hostname,
                             "processorid": self.processorid,
+                            "uriid_source": q_item.get("uriid"),
                             "uri_type": "zipfile",
                             "uri": zs_obj.get("path"),
                             "metadata": {

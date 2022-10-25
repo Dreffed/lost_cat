@@ -22,7 +22,7 @@ class TestLostCat(unittest.TestCase):
 
         _paths = {
             "database": f"sqlite:///{_db_path}" #
-        }        
+        }
         self.obj = LostCat(paths=_paths)
 
     @classmethod
@@ -37,30 +37,48 @@ class TestLostCat(unittest.TestCase):
             label="blank label",
             base_class= BaseProcessor,
             overwrite=True,
-        ) 
+        )
 
         # check the processor got added..
         for _pk, _pv in self.obj._processors.items():
-            print(f"{_pk}\t{_pv}") 
+            print(f"{_pk}\t{_pv}")
 
         assert "baseprocessor 0.0.1" in self.obj._processors
         _proc = self.obj._processors.get("baseprocessor 0.0.1", {})
         assert "uri" in _proc
         assert _proc.get("uri","") == "lost_cat.processors.base_processor.BaseProcessor"
 
+    def test_addprocessor_path(self):
+        """Will add a processor by its class path"""
+        #from lost_cat.processors.filesystem_scanner.FileScanner
+
+        self.obj.add_processor(
+            module_path="lost_cat.processors.filesystem_scanner.FileScanner"
+        )
+
+        # check the processor got added..
+        for _pk, _pv in self.obj._processors.items():
+            print(f"{_pk}\t{_pv}")
+
+        assert "filescanner 0.0.2" in self.obj._processors
+        _proc = self.obj._processors.get("filescanner 0.0.2", {})
+        assert "uri" in _proc
+        assert _proc.get("uri","") == "lost_cat.processors.filesystem_scanner.FileScanner"
+
+
     def test_addsource(self):
         """ Test the addition of a source to the db"""
         _params = {
             "processor":    "baseprocessor 0.0.1",
-            "uri":          os.path.abspath("tests/data"),
+            "uri":          os.path.abspath("logs"),
             "isroot":       True,
             "overwrite":    True,
         }
-    
+
         _src = self.obj.add_source(**_params)
         print("Source:", _src)
 
-        assert _src.get("type") == "BaseProcessor"
+        assert _src.get("type") == "CLASS:BaseProcessor"
         assert _src.get("processorname","").startswith("baseprocessor ")
 
         # check that we get the same params for a readd
@@ -89,9 +107,28 @@ class TestLostCat(unittest.TestCase):
         self.obj.load_db_sources()
 
         for _sk, _sv in self.obj._sources.items():
-            print(f"Source: {_sk}")
+            print(f"Sources [{_sk}]")
             for _uk, _uv in _sv.get("uris", {}).items():
                 print(f"\t{_uk} => {_uv}")
 
             for _pp in _sv.get("processors", []):
                 print(f"Proc: {_pp}")
+
+        assert "CLASS:BaseProcessor" in self.obj._sources
+
+    def test_simplescan(self):
+        """run a simple test of the system"""
+        # add a source for FileScanner
+        self.obj.add_processor(
+            module_path="lost_cat.processors.filesystem_scanner.FileScanner"
+        )
+        _uri = os.path.abspath(r"tests\data")
+
+        self.obj.add_source(processor = "filescanner 0.0.2", uri = _uri, isroot = True, overwrite = True)
+
+        self.obj.load_db_sources()
+
+        _resp = self.obj.catalog_artifacts()
+        print(f"Catalog: {_resp}")
+
+

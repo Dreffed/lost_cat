@@ -62,7 +62,7 @@ class URIs(Base):
     __table_args__ = {'extend_existing': True}
     __tablename__ = "uris"
     id = Column(Integer, primary_key=True)
-    uriid_parent = Column(Integer, foreign_key="uris.id", default=0)
+    uriid_parent = Column(Integer, ForeignKey("uris.id"), default=0)
 
     uri = Column(String())
 

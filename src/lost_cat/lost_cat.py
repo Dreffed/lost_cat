@@ -249,7 +249,7 @@ class LostCat():
                                 "groups": self._tags.get("groups", {}),
                                 "metadata": self._tags.get("metadata", {}),
                                 "anon": self._tags.get("anon", {}),
-                            } 
+                            }
 
                     if _tags:
                         self._processors[_pname]["tags"] = _tags
@@ -334,7 +334,7 @@ class LostCat():
                         "obj": obj,
                         "metadata": _pmd.get(_pname),
                     }
-            
+
             _tags = None
             if not (_tags := self._tags.get("pname")):
                 # load the default _tags
@@ -344,7 +344,7 @@ class LostCat():
                         "groups": self._tags.get("groups", {}),
                         "metadata": self._tags.get("metadata", {}),
                         "anon": self._tags.get("anon", {}),
-                    } 
+                    }
 
             if _tags:
                 self._processors[_pname]["tags"] = _tags
@@ -405,7 +405,7 @@ class LostCat():
         # save the processor to the database
         if _pname in self._processors and overwrite is False:
             logger.debug("Class is already loaded %s %s", _pname, _uri)
-            return
+            return _pname, _uri, base_class, obj
 
         return _pname, _uri, base_class, obj
 
@@ -1008,7 +1008,10 @@ class LostCat():
         """Will scan the sources and load a dictionary with the found files,
         it'll use the template list for extensions to use.
         <<for web addresses, it'll need a scraper built>>"""
-        start = time.time()
+        _data = {
+            "start": time.time()
+        }
+
 
         # run through the processor list and build a queue for each one...
         _in_queues = {}

@@ -116,7 +116,7 @@ class BaseProcessor():
 
         src = {
             "uri": uri,
-            "type": self.__class__.__name__,
+            "type": f"CLASS:{self.__class__.__name__}",
             "domain": "<base class>"
         }
 

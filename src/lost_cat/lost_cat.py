@@ -1009,7 +1009,8 @@ class LostCat():
         it'll use the template list for extensions to use.
         <<for web addresses, it'll need a scraper built>>"""
         _data = {
-            "start": time.time()
+            "start": time.time(),
+            "processors": [],
         }
 
 
@@ -1055,6 +1056,12 @@ class LostCat():
         _out_queue.put("DONE")
 
         self.save_queue(_out_queue)
+
+        _data["end"] = time.time(),
+        _data["duration"] = _data["end"] - _data["start"]
+        _data["processors"] = _processor
+
+        return _data
 
     def parse_artifacts(self):
         """Will load the """

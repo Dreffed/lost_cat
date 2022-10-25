@@ -124,7 +124,7 @@ class LostCat():
         self._parse_ext = dict()        # a dict of extension used to select the
                                         # correct parser to use
         self._features = ["scanner", "parser", "converter"]     # a set of features to make avaiable
-        self._anonimizer = TagAnon      # the anonymizer class, will look at tags and
+        self._anonobj = None            # the anonymizer class, will look at tags and
                                         # them, using a local cache for consistency
 
         # caches for updates...
@@ -188,6 +188,10 @@ class LostCat():
         """
         logger.debug("Added tags: %s", tags)
         self._tags = tags
+
+    def set_anon(self, anon: TagAnon) -> None:
+        """This will set the anonimizer for the class"""
+        self._anonobj = anon
 
     def load_processors(self):
         """Will load the core information from the underlying datastores"""
@@ -869,21 +873,22 @@ class LostCat():
                     # check for changes
                     if _version and (_version.size != o_item.get("versions", {}).get('size') \
                         or _version.modified != o_item.get("versions", {}).get('modified')):
+                        
                         logger.info("updated File...%s", o_item.get("uri"))
                         logger.info("\tOItem: %s", o_item.get("versions", {}))
                         logger.debug("\tOrig: Size: %s\n\t      Mod:  %s", _version.size, _version.modified)
                         logger.debug("\tNew:  Size: %s\n\t      Mod:  %s", o_item.get("versions", {}).get('size'), o_item.get("versions", {}).get('modified'))
                         _version = None
 
-                    if not _version:
-                        _vmod = o_item.get("versions", {}).get('modified')
-                        _version = Versions(
-                                uriid = _uriid,
-                                modified = o_item.get("versions", {}).get('modified'),
-                                size = o_item.get("versions", {}).get('size'))
+                if not _version:
+                    _vmod = o_item.get("versions", {}).get('modified')
+                    _version = Versions(
+                            uriid = _uriid,
+                            modified = o_item.get("versions", {}).get('modified'),
+                            size = o_item.get("versions", {}).get('size'))
 
-                        _db_sess.add(_version)
-                        _db_sess.flush()
+                    _db_sess.add(_version)
+                    _db_sess.flush()
 
                 _vid = _version.id
 
@@ -1052,13 +1057,14 @@ class LostCat():
             # scan returns on completion
             obj.scan()
 
+        _data["load"] = time.time(),
+
         # process the output
         _out_queue.put("DONE")
 
         self.save_queue(_out_queue)
 
         _data["end"] = time.time(),
-        _data["duration"] = _data["end"] - _data["start"]
         _data["processors"] = _processor
 
         return _data
@@ -1119,20 +1125,26 @@ class LostCat():
             obj.out_queue(out_queue=_out_queue)
 
             # set the helper functions...
-            if self._anonimizer:
-                obj.avail_functions().get("anonimizer")(anonimizer=self._anonimizer(obj.default_anon()))
+            if _anonfunc := obj.avail_functions().get("anon"):
+                try:
+                    _anonfunc(anonimizer=self._anonobj)
+                except Exception as ex:
+                    logger.warning("No Anonimizer set\n\t%s", ex)
 
             if _tags := _proc.get("tags",{}):
                 for _fld in ["alias", "groups", "metadata"]:
                     if _func := obj.avail_functions().get(f"tags_{_fld}"):
                         _func(tags=_tags.get(_fld))
             else:
-                if "tags_alias" in obj.avail_functions():
-                    obj.avail_functions().get(f"tags_alias")(tags=obj.default_alias())
-                if "tags_groups" in obj.avail_functions():
-                    obj.avail_functions().get("tags_groups")(tags=obj.default_groups())
-                if "tags_metadata" in obj.avail_functions():
-                    obj.avail_functions().get("tags_metadata")(tags=obj.default_metadata())
+                if (_fn_def := obj.avail_functions().get(f"default_alias")) and \
+                        (_fn := obj.avail_functions().get(f"tags_alias")):
+                    _fn(tags=_fn_def)
+                if (_fn_def := obj.avail_functions().get(f"default_groups")) and \
+                        (_fn := obj.avail_functions().get(f"tags_groups")):
+                    _fn(tags=_fn_def)
+                if (_fn_def := obj.avail_functions().get(f"default_metadata")) and \
+                        (_fn := obj.avail_functions().get(f"tags_metadata")):
+                    _fn(tags=_fn_def)
 
             # initi the parser...
             obj.avail_functions().get("parser")()

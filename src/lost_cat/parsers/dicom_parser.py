@@ -78,7 +78,7 @@ class DICOMParser(BaseParser):
             "metadata": {}
         }
 
-        for tag in self._grp_tags:
+        for tag in self._groups_tags:
             # chjeck for PI data...
             tag = self._alias_tags.get(tag,tag)
 
@@ -87,7 +87,7 @@ class DICOMParser(BaseParser):
             else:
                 data["grouping"][tag] = self._file.get(tag)
 
-        for tag in self._md_tags:
+        for tag in self._metadata_tags:
             tag = self._alias_tags.get(tag,tag)
             # chjeck for PI data...
             if self._anon and self._anon.is_pii(tag):

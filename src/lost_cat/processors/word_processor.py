@@ -34,19 +34,19 @@ class WordProcessor(BaseProcessor):
         logger.debug("Settings: %s", self.settings)
 
         # init the tags lists
-        self._anon = None
-        self._grp_tags = {}
-        self._md_tags = {}
+        self._anonobj = None
+        self._groups_tags = {}
+        self._metadata_tags = {}
         self._alias_tags = {}
 
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""
         return {
             "parser": self.parser,
-            "anonimizer": self.anonimizer,
-            "tags_alias": self.alias_tags,
-            "tags_groups": self.groups_tags,
-            "tags_metadata": self.metadata_tags,
+            #"anonimizer": self.anonimizer,
+            #"tags_alias": self.alias_tags,
+            #"tags_groups": self.groups_tags,
+            #"tags_metadata": self.metadata_tags,
             #"metadata": self.metadata,
             #"contents": self.get_image,
             "export": {
@@ -95,7 +95,7 @@ class WordProcessor(BaseProcessor):
 
     def anonimizer(self, anonimizer: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
-        self._anon = anonimizer
+        self._anonobj = anonimizer
 
     def alias_tags(self, tags: list) -> None:
         """Allows for the metadata tags to be anonymized"""
@@ -104,11 +104,11 @@ class WordProcessor(BaseProcessor):
     def groups_tags(self, tags: list) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
-        self._grp_tags = tags
+        self._groups_tags = tags
 
     def metadata_tags(self, tags: list):
         """Sets the tags to use for general metadata"""
-        self._md_tags = tags
+        self._metadata_tags = tags
 
     def parser(self) -> None:
         """ load the for each match to a parser, load the
@@ -152,9 +152,9 @@ class WordProcessor(BaseProcessor):
 
                 # return the file metadata and information...
                 # load the
-                _fileobj.set_anonimizer(anonimizer=self._anon)
-                _fileobj.set_group_tags(tags=self._grp_tags)
-                _fileobj.set_metadata_tags(tags=self._md_tags)
+                _fileobj.set_anon(anon=self._anonobj)
+                _fileobj.set_groups_tags(tags=self._groups_tags)
+                _fileobj.set_metadata_tags(tags=self._metadata_tags)
                 _filemd = _fileobj.parser()
                 _fileobj.close()
 

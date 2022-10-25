@@ -43,7 +43,7 @@ class EXIFParser:
     def set_group_tags(self, tags: dict) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
-        self._grp_tags = tags
+        self._groups_tags = tags
 
     def set_metadata_tags(self, tags):
         """Sets the tags to use for general metadata"""

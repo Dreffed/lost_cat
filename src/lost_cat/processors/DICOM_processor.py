@@ -176,7 +176,7 @@ class DICOMProcessor(BaseProcessor):
                     _dcmobj = DICOMParser(uri=_uri)
 
                 # load the
-                _dcmobj.set_anon(anon=self._anon)
+                _dcmobj.set_anon(anon=self._anonobj)
                 _dcmobj.set_alias_tags(tags=self._alias_tags)
                 _dcmobj.set_groups_tags(tags=self._groups_tags)
                 _dcmobj.set_metadata_tags(tags=self._metadata_tags)

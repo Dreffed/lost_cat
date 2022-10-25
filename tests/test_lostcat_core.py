@@ -1,7 +1,6 @@
 """A test case for the path utils module"""
 import logging
 import os
-import sys
 import unittest
 from lost_cat.lost_cat import ClassFailedToLoad, LostCat
 from lost_cat.processors.base_processor import BaseProcessor

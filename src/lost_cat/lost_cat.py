@@ -1141,7 +1141,7 @@ class LostCat():
                         _func(tags=_tags.get(_fld))
             elif self._tags:
                 logger.debug("\tChecking generic settings...")
-                for _tn in ["alias", "groups", "meatadata"]:
+                for _tn in ["alias", "groups", "metadata"]:
                     if _fn := obj.avail_functions().get(f"tags_{_tn}"):
                         logger.debug("\t\t%s => %s", _tn, _fn)
                         _fn(tags=self._tags.get(f"{_fn}",[]))

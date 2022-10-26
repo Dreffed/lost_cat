@@ -47,20 +47,22 @@ class BaseProcessor():
         """the semiphore to check for end the queue reads """
         return self._semiphore
 
-    def anonimizer(self, anonimizer: TagAnon) -> None:
+    def set_anonimizer(self, anonimizer: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
         self._anonobj = anonimizer
 
-    def alias_tags(self, tags: dict) -> None:
-        """Allows for the metadata tags to be anonymized"""
+    def set_alias_tags(self, tags: dict) -> None:
+        """Allows for the metadata tags to be anonymized
+            <tag to rename>: <tag new name>
+        '"""
         self._alias_tags = tags
 
-    def groups_tags(self, tags: list) -> None:
+    def set_groups_tags(self, tags: list) -> None:
         """Sets the metadata tags to be used for grouping
         The grouping is used to organize the structure"""
-        self._group_tags = tags
+        self._groups_tags = tags
 
-    def metadata_tags(self, tags: list):
+    def set_metadata_tags(self, tags: list):
         """Sets the tags to use for general metadata"""
         self._metadata_tags = tags
 
@@ -125,13 +127,17 @@ class BaseProcessor():
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""
         return {
-            "build": self.build_path,
             "sources": self.in_queue,
             "uris": self.out_queue,
             #"scan": self.scan,
 
             #"fetch": self.fetch,
             #"upload": self.upload,
+
+            "anonimizer": self.set_anonimizer,
+            "tags_alias": self.set_alias_tags,
+            "tags_metadata": self.set_metadata_tags,
+            "tags_groups": self.set_groups_tags,
         }
 
     @staticmethod

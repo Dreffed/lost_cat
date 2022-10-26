@@ -47,9 +47,9 @@ class BaseProcessor():
         """the semiphore to check for end the queue reads """
         return self._semiphore
 
-    def anon(self, anon: TagAnon) -> None:
+    def anonimizer(self, anonimizer: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
-        self._anonobj = anon
+        self._anonobj = anonimizer
 
     def alias_tags(self, tags: dict) -> None:
         """Allows for the metadata tags to be anonymized"""

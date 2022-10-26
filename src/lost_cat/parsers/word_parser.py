@@ -35,6 +35,10 @@ class WordParser(BaseParser):
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""
         return {
+            #"anonimizer": self.set_anonimizer,
+            #"tags_alias": self.set_alias_tags,
+            #"tags_metadata": self.set_metadata_tags,
+            #"tags_groups": self.set_groups_tags,
             "parser": self.parser,
             "content": self.get_content,
         }

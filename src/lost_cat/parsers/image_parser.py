@@ -2,12 +2,13 @@
 import os
 import logging
 import PIL.Image, PIL.ExifTags
+from lost_cat.parsers.base_parser import BaseParser
 
 from lost_cat.utils.tag_anon import TagAnon
 
 logger = logging.getLogger(__name__)
 
-class EXIFParser:
+class EXIFParser(BaseParser):
     """
 
     ---
@@ -17,16 +18,27 @@ class EXIFParser:
     -------
 
     """
-    name = "Image"
-    version = "0.0.1"
 
-    def __init__(self, uri: str) -> None:
-        self._anon = None
-        self._uri = uri
-        self._img = PIL.Image.open(self._uri)
-        self._groups_tags = {}
-        self._metadata_tags = {}
-        self._alias_tags = {}
+    def __init__(self, uri: str = None, bytes_io: bytes = None, settings: dict = None) -> None:
+        super().__init__(uri=uri, bytes_io=bytes_io, settings=settings)
+        self._version = "0.0.1"
+        self._name = f"{self.__class__.__name__.lower()} {self._version}"
+
+        if not settings:
+            logger.debug("Loading default settings")
+            #self.settings = DICOMParser.avail_config()
+
+        logger.debug("Name: %s", self._name)
+        logger.debug("Settings: %s", self.settings)
+
+        # file
+        self._uri = None
+        self._file = None
+        if uri:
+            self._uri = uri
+            #self._file = pydicom.dcmread(self._uri)
+        elif bytes_io:
+            #self._file = pydicom.dcmread(bytes_io)
 
     def __str__(self):
         return f"{self.name} {self.version} <{self._uri}>"
@@ -35,19 +47,6 @@ class EXIFParser:
         """"""
         if self._img:
             self._img = None
-
-    def set_anon(self, anon: TagAnon) -> None:
-        """Allows for the metadata tags to be anonymized"""
-        self._anon = anon
-
-    def set_group_tags(self, tags: dict) -> None:
-        """Sets the metadata tags to be used for grouping
-        The grouping is used to organize the structure"""
-        self._groups_tags = tags
-
-    def set_metadata_tags(self, tags):
-        """Sets the tags to use for general metadata"""
-        self._export_tags = tags
 
     def get_extensions(self):
         """

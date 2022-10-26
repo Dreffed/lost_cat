@@ -150,11 +150,18 @@ class WordProcessor(BaseProcessor):
                 else:
                     _fileobj = WordParser(uri=_uri)
 
-                # return the file metadata and information...
-                # load the
-                _fileobj.set_anon(anon=self._anonobj)
-                _fileobj.set_groups_tags(tags=self._groups_tags)
-                _fileobj.set_metadata_tags(tags=self._metadata_tags)
+                # set the anonimizer and tags if defined
+                if  _fn := _fileobj.avail_functions().get("anonimizer"):
+                    _fn(anonimizer=self._anonobj)
+
+                #for _tn in ["alias", "groups", "metadata"]:
+                if _fn := _fileobj.avail_functions().get("alias"):
+                    _fn(tags=self._alias_tags)
+                if _fn := _fileobj.avail_functions().get("groups"):
+                    _fn(tags=self._groups_tags)
+                if _fn := _fileobj.avail_functions().get("metadata"):
+                    _fn(tags=self._metadata_tags)
+
                 _filemd = _fileobj.parser()
                 _fileobj.close()
 

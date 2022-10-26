@@ -38,6 +38,7 @@ class DICOMParser(BaseParser):
         return {
             "parser": self.parser,
             "array": self.get_array,
+            #"anonimizer": self.set_anonimizer,
             "tags_alias": self.set_alias_tags,
             "tags_metadata": self.set_metadata_tags,
             "tags_groups": self.set_groups_tags,
@@ -82,16 +83,16 @@ class DICOMParser(BaseParser):
             # chjeck for PI data...
             tag = self._alias_tags.get(tag,tag)
 
-            if self._anon and self._anon.is_pii(tag):
-                data["grouping"][tag] = self._anon.get_anon(tag=tag, value=self._file.get(tag))
+            if self._anonobj and self._anonobj.is_pii(tag):
+                data["grouping"][tag] = self._anonobj.get_anon(tag=tag, value=self._file.get(tag))
             else:
                 data["grouping"][tag] = self._file.get(tag)
 
         for tag in self._metadata_tags:
             tag = self._alias_tags.get(tag,tag)
             # chjeck for PI data...
-            if self._anon and self._anon.is_pii(tag):
-                data["metadata"][tag] = self._anon.get_anon(tag=tag, value=self._file.get(tag))
+            if self._anonobj and self._anonobj.is_pii(tag):
+                data["metadata"][tag] = self._anonobj.get_anon(tag=tag, value=self._file.get(tag))
             else:
                 data["metadata"][tag] = self._file.get(tag)
 

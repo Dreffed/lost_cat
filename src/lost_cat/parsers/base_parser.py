@@ -21,7 +21,7 @@ class BaseParser():
         logger.debug("Settings: %s", self.settings)
 
         # init the tags lists
-        self._anon = None
+        self._anonobj = None
         self._alias_tags = {}
         self._groups_tags = {}
         self._metadata_tags = {}
@@ -39,6 +39,10 @@ class BaseParser():
     def avail_functions(self) -> dict:
         """Returns a dict prointing to the available functions"""
         return {
+            #"anonimizer": self.set_anonimizer,
+            #"tags_alias": self.set_alias_tags,
+            #"tags_groups": self.set_groups_tags,
+            #"tags_metadata": self.set_metadata_tags,
             "parser": self.parser
         }
 
@@ -57,9 +61,9 @@ class BaseParser():
             ]
         }
 
-    def set_anon(self, anon: TagAnon) -> None:
+    def set_anonimizer(self, anonimizer: TagAnon) -> None:
         """Allows for the metadata tags to be anonymized"""
-        self._anon = anon
+        self._anonobj = anonimizer
 
     def set_alias_tags(self, tags: dict) -> None:
         """Allows for the metadata tags to be anonymized

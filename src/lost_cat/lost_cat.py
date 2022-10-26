@@ -189,9 +189,9 @@ class LostCat():
         logger.debug("Added tags: %s", tags)
         self._tags = tags
 
-    def set_anon(self, anon: TagAnon) -> None:
+    def set_anonimizer(self, anonimizer: TagAnon) -> None:
         """This will set the anonimizer for the class"""
-        self._anonobj = anon
+        self._anonobj = anonimizer
 
     def load_processors(self):
         """Will load the core information from the underlying datastores"""
@@ -873,7 +873,7 @@ class LostCat():
                     # check for changes
                     if _version and (_version.size != o_item.get("versions", {}).get('size') \
                         or _version.modified != o_item.get("versions", {}).get('modified')):
-                        
+
                         logger.info("updated File...%s", o_item.get("uri"))
                         logger.info("\tOItem: %s", o_item.get("versions", {}))
                         logger.debug("\tOrig: Size: %s\n\t      Mod:  %s", _version.size, _version.modified)
@@ -1125,28 +1125,44 @@ class LostCat():
             obj.out_queue(out_queue=_out_queue)
 
             # set the helper functions...
-            if _anonfunc := obj.avail_functions().get("anon"):
+            if _anonfunc := obj.avail_functions().get("anonimizer"):
                 try:
                     _anonfunc(anonimizer=self._anonobj)
                 except Exception as ex:
                     logger.warning("No Anonimizer set\n\t%s", ex)
 
+
+            logger.debug("Setting tags...")
             if _tags := _proc.get("tags",{}):
+                logger.debug("\tChecking proc settings...")
                 for _fld in ["alias", "groups", "metadata"]:
                     if _func := obj.avail_functions().get(f"tags_{_fld}"):
+                        logger.debug("\t\t%s", _fld)
                         _func(tags=_tags.get(_fld))
+            elif self._tags:
+                logger.debug("\tChecking generic settings...")
+                for _tn in ["alias", "groups", "meatadata"]:
+                    if _fn := obj.avail_functions().get(f"tags_{_tn}"):
+                        logger.debug("\t\t%s => %s", _tn, _fn)
+                        _fn(tags=self._tags.get(f"{_fn}",[]))
+
             else:
+                logger.debug("\tChecking default...")
                 if (_fn_def := obj.avail_functions().get(f"default_alias")) and \
                         (_fn := obj.avail_functions().get(f"tags_alias")):
+                    logger.debug("\t\t%s => %s", _fn_def, _fn)
                     _fn(tags=_fn_def)
                 if (_fn_def := obj.avail_functions().get(f"default_groups")) and \
                         (_fn := obj.avail_functions().get(f"tags_groups")):
+                    logger.debug("\t\t%s => %s", _fn_def, _fn)
                     _fn(tags=_fn_def)
                 if (_fn_def := obj.avail_functions().get(f"default_metadata")) and \
                         (_fn := obj.avail_functions().get(f"tags_metadata")):
+                    logger.debug("\t\t%s => %s", _fn_def, _fn)
                     _fn(tags=_fn_def)
 
             # initi the parser...
+            logger.debug("run the parser function...")
             obj.avail_functions().get("parser")()
 
         # process the output

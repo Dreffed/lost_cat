@@ -38,7 +38,7 @@ class DICOMProcessor(BaseProcessor):
         """Returns a dict prointing to the available functions"""
         return {
             "parser": self.parser,
-            "anon": self.anon,
+            "anonimizer": self.anonimizer,
             "tags_alias": self.alias_tags,
             "tags_groups": self.groups_tags,
             "tags_metadata": self.metadata_tags,
@@ -171,17 +171,25 @@ class DICOMProcessor(BaseProcessor):
                     dcm_data = zf.read(q_item.get("uri"))
                     bytes_io = io.BytesIO(dcm_data)
 
-                    _dcmobj = DICOMParser(bytes_io=bytes_io)
+                    _fileobj = DICOMParser(bytes_io=bytes_io)
                 else:
-                    _dcmobj = DICOMParser(uri=_uri)
+                    _fileobj = DICOMParser(uri=_uri)
 
                 # load the
-                _dcmobj.set_anon(anon=self._anonobj)
-                _dcmobj.set_alias_tags(tags=self._alias_tags)
-                _dcmobj.set_groups_tags(tags=self._groups_tags)
-                _dcmobj.set_metadata_tags(tags=self._metadata_tags)
-                _dcmmd = _dcmobj.parser()
-                _dcmobj.close()
+                # set the anonimizer and tags if defined
+                if  _fn := _fileobj.avail_functions().get("anonimizer"):
+                    _fn(anonimizer=self._anonobj)
+
+                #for _tn in ["alias", "groups", "metadata"]:
+                if _fn := _fileobj.avail_functions().get("alias"):
+                    _fn(tags=self._alias_tags)
+                if _fn := _fileobj.avail_functions().get("groups"):
+                    _fn(tags=self._groups_tags)
+                if _fn := _fileobj.avail_functions().get("metadata"):
+                    _fn(tags=self._metadata_tags)
+
+                _dcmmd = _fileobj.parser()
+                _fileobj.close()
 
                 # process the tags and return...
                 _md = {}

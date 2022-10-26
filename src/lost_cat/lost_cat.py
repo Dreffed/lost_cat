@@ -183,7 +183,7 @@ class LostCat():
             alias: dict of k,v pairs, k is field to convert v is the field name
             groups: list of tags to use for grouping
             metadata: list of tags to metadata
-            anon: list of tags to run through the anonimizer
+            anonimizer: list of tags to run through the anonimizer
             <class name>: { alias, group, metadata}
         """
         logger.debug("Added tags: %s", tags)
@@ -252,7 +252,7 @@ class LostCat():
                                 "alias": self._tags.get("alias", {}),
                                 "groups": self._tags.get("groups", {}),
                                 "metadata": self._tags.get("metadata", {}),
-                                "anon": self._tags.get("anon", {}),
+                                "anonimizer": self._tags.get("anonimizer", {}),
                             }
 
                     if _tags:
@@ -347,7 +347,7 @@ class LostCat():
                         "alias": self._tags.get("alias", {}),
                         "groups": self._tags.get("groups", {}),
                         "metadata": self._tags.get("metadata", {}),
-                        "anon": self._tags.get("anon", {}),
+                        "anonimizer": self._tags.get("anonimizer", {}),
                     }
 
             if _tags:

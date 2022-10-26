@@ -1135,16 +1135,16 @@ class LostCat():
             logger.debug("Setting tags...")
             if _tags := _proc.get("tags",{}):
                 logger.debug("\tChecking proc settings...")
-                for _fld in ["alias", "groups", "metadata"]:
-                    if _func := obj.avail_functions().get(f"tags_{_fld}"):
-                        logger.debug("\t\t%s", _fld)
-                        _func(tags=_tags.get(_fld))
+                for _tn in ["alias", "groups", "metadata"]:
+                    if _func := obj.avail_functions().get(f"tags_{_tn}"):
+                        logger.debug("\t\t%s", _tn)
+                        _func(tags=_tags.get(_tn))
             elif self._tags:
                 logger.debug("\tChecking generic settings...")
                 for _tn in ["alias", "groups", "metadata"]:
                     if _fn := obj.avail_functions().get(f"tags_{_tn}"):
                         logger.debug("\t\t%s => %s", _tn, _fn)
-                        _fn(tags=self._tags.get(f"{_fn}",[]))
+                        _fn(tags=self._tags.get(f"{_tn}",[]))
 
             else:
                 logger.debug("\tChecking default...")

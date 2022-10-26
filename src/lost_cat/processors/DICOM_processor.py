@@ -38,10 +38,10 @@ class DICOMProcessor(BaseProcessor):
         """Returns a dict prointing to the available functions"""
         return {
             "parser": self.parser,
-            "anonimizer": self.anonimizer,
-            "tags_alias": self.alias_tags,
-            "tags_groups": self.groups_tags,
-            "tags_metadata": self.metadata_tags,
+            "anonimizer": self.set_anonimizer,
+            "tags_alias": self.set_alias_tags,
+            "tags_groups": self.set_groups_tags,
+            "tags_metadata": self.set_metadata_tags,
             #"metadata": self.metadata,
             #"contents": self.get_image,
             "export": {
@@ -142,6 +142,9 @@ class DICOMProcessor(BaseProcessor):
         The parser enabled processer will use a helper file to handle the files"""
         use_threads = self.settings.get("threads",{}).get("count",5)
 
+        logger.debug("\tTags: \n\tAlias: %s\n\tGroups: %s\n\tMetadata: %s",
+                    self._alias_tags, self._groups_tags, self._metadata_tags)
+
         for t_idx in range(use_threads):
             logger.info("Thread: %s",t_idx)
             scan_q = td.Thread(target=self.parser_file)
@@ -181,11 +184,14 @@ class DICOMProcessor(BaseProcessor):
                     _fn(anonimizer=self._anonobj)
 
                 #for _tn in ["alias", "groups", "metadata"]:
-                if _fn := _fileobj.avail_functions().get("alias"):
+                if _fn := _fileobj.avail_functions().get("tags_alias"):
+                    logger.debug("\tAlias Tags: %s", self._alias_tags)
                     _fn(tags=self._alias_tags)
-                if _fn := _fileobj.avail_functions().get("groups"):
+                if _fn := _fileobj.avail_functions().get("tags_groups"):
+                    logger.debug("\tGroups Tags: %s", self._groups_tags)
                     _fn(tags=self._groups_tags)
-                if _fn := _fileobj.avail_functions().get("metadata"):
+                if _fn := _fileobj.avail_functions().get("tags_metadata"):
+                    logger.debug("\tMetadata Tags: %s", self._metadata_tags)
                     _fn(tags=self._metadata_tags)
 
                 _dcmmd = _fileobj.parser()

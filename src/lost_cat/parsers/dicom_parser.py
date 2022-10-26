@@ -79,6 +79,9 @@ class DICOMParser(BaseParser):
             "metadata": {}
         }
 
+        logger.debug("Extract tags:\n\tAlias: %s\n\tGroups: %s\n\tMetadata: %s",
+                    self._alias_tags, self._groups_tags, self._metadata_tags)
+
         for tag in self._groups_tags:
             # chjeck for PI data...
             tag = self._alias_tags.get(tag,tag)

@@ -3,7 +3,7 @@ import logging
 
 from lost_cat.database.schema import Base
 from sqlalchemy import create_engine, MetaData, Table
-from sqlalchemy.orm import sessionmaker, session
+from sqlalchemy.orm import sessionmaker, session as sqlsession
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +16,12 @@ class DBEngine():
         # create the mapping objects...
         Base.metadata.create_all(self.engine)
         self.metadata = MetaData()
-        self.session = sessionmaker(bind=self.engine)
+        #self.session = sessionmaker(bind=self.engine)()
 
-    def session(self) -> session:
+    def session(self) -> sqlsession:
         """"""
-        if not self.session:
-            self.session = sessionmaker(bind=self.engine)
-        return self.session
+        _session = sessionmaker(bind=self.engine)
+        return _session()
 
     def close(self):
         """"""

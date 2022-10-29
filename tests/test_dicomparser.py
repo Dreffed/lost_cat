@@ -63,8 +63,6 @@ class TestLostCat(unittest.TestCase):
 
         data = avail_func.get("parser")()
         print("\tParser: ", data)
-        for _tn in _tag_labels:
-            
 
         obj.close()
 
